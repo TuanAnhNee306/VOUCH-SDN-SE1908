@@ -2,9 +2,10 @@ const nodemailer = require('nodemailer');
 const { str, int, bool } = require('../config/env');
 const { AppError } = require('../utils/errors');
 
-// MAIL_MODE=smtp (mac dinh): gui email that qua SMTP.
-// MAIL_MODE=console: chi in noi dung ra man hinh may chu, dung khi phat trien khong co SMTP.
-const isConsoleMode = () => str('MAIL_MODE', 'smtp').toLowerCase() === 'console';
+// MAIL_MODE=smtp: gui email that qua SMTP.
+// MAIL_MODE=console (mac dinh cho demo): khong gui email, tra ma OTP demo ve app.
+// Production phai dat ro MAIL_MODE=smtp va cac bien SMTP_*.
+const isConsoleMode = () => str('MAIL_MODE', 'console').toLowerCase() === 'console';
 
 let transport = null;
 function getTransport() {
