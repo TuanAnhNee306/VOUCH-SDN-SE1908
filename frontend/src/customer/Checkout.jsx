@@ -173,7 +173,10 @@ export function PaymentReturn() {
   const code = params.get('vnp_TxnRef') || params.get('orderCode');
   useEffect(() => {
     if (!session) return;
-    customerApi.get('/orders/me').then((list) => {
+    const signedReturn = params.has('vnp_SecureHash')
+      ? customerApi.get(`/orders/vnpay-return?${params.toString()}`).catch(() => null)
+      : Promise.resolve();
+    signedReturn.then(() => customerApi.get('/orders/me')).then((list) => {
       const o = list.find((x) => x.paymentOrderCode === code);
       navigate(o ? `/orders/${o.id}/result` : '/orders', { replace: true });
     }).catch(() => navigate('/orders', { replace: true }));

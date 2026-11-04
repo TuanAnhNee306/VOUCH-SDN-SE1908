@@ -26,6 +26,18 @@ router.get('/orders/vnpay-ipn', ah(async (req, res) => {
   return res.json({ RspCode: '00', Message: 'Confirm Success' });
 }));
 
+// Fallback for the browser Return URL. The payload is still verified with the
+// VNPAY checksum; it never trusts a client-provided payment status.
+router.get('/orders/vnpay-return', ah(async (req, res) => {
+  const result = parseVnpayIpn(req.query);
+  if (!result) return res.status(400).json({ code: 'INVALID_SIGNATURE', message: 'Kết quả VNPAY không hợp lệ.' });
+  const order = await Order.findOne({ paymentOrderCode: result.orderCode });
+  if (!order) return res.status(404).json({ code: 'ORDER_NOT_FOUND', message: 'Không tìm thấy đơn hàng.' });
+  if (Number(order.totalAmount) !== result.amount) return res.status(400).json({ code: 'INVALID_AMOUNT', message: 'Số tiền không khớp.' });
+  const outcome = await orders.handleVnpayIpn(result);
+  res.json({ outcome });
+}));
+
 router.post('/orders/payment-webhook', ah(async (req, res) => {
   // Compatibility hook for local automated tests only. Real VNPAY confirmations use vnpay-ipn.
   if (!bool('PAYMENT_SIMULATOR', false)) return res.status(404).json({ code: 'NOT_FOUND', message: 'API không tồn tại.' });
