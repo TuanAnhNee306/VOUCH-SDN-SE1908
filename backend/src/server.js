@@ -8,6 +8,11 @@ const { verifyMail } = require('./services/mail');
 async function main() {
   await connectDb();
   if (bool('AUTO_SEED', true)) await seedIfEmpty();
+  // Idempotent demo catalog: useful on free hosting where one-off jobs are unavailable.
+  if (bool('SEED_CATALOG_ON_START', false)) {
+    const { seedCatalog } = require('./seed-catalog');
+    await seedCatalog();
+  }
   await verifyMail();
   const port = int('PORT', 3000);
   const server = createApp().listen(port, () => console.log(`[api] Voucher Platform API chay tai http://localhost:${port}/api`));

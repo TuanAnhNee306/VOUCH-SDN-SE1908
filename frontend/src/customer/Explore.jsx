@@ -22,7 +22,7 @@ export function VoucherCard({ c, onClick }) {
 
   return (
     <div className={`vcard ${favorited ? 'fav' : ''}`} onClick={onClick} role="button" tabIndex={0}>
-      <CampaignImage src={c.image} />
+      <CampaignImage src={c.image || c.brand?.logo} className={!c.image && c.brand?.logo ? 'brand-art' : ''} />
       {c.discountPercent > 0 && <span className="disc">-{c.discountPercent}%</span>}
       <button type="button" className="fav-btn" disabled={busy} onClick={toggleFavorite} aria-label={favorited ? 'Bỏ yêu thích' : 'Yêu thích'} title={favorited ? 'Bỏ yêu thích' : 'Yêu thích'}>
         {favorited ? '❤️' : '🤍'}
