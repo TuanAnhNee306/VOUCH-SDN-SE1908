@@ -1,0 +1,33 @@
+{
+  "flow": "catalog-negative",
+  "startedAt": "2026-11-04T12:53:42.812Z",
+  "steps": [
+    {
+      "actor": "Public",
+      "action": "Catalog at APPROVED future start",
+      "expected": "hidden",
+      "actual": "hidden",
+      "result": "PASS",
+      "at": "2026-11-04T12:53:43.002Z"
+    },
+    {
+      "actor": "Public",
+      "action": "Catalog at APPROVED expired window",
+      "expected": "hidden",
+      "actual": "hidden",
+      "result": "PASS",
+      "at": "2026-11-04T12:53:43.022Z"
+    },
+    {
+      "actor": "Admin/Public",
+      "action": "Restore original dates and reapprove",
+      "expected": "PUBLISHED + visible",
+      "actual": "PUBLISHED + visible",
+      "result": "PASS",
+      "at": "2026-11-04T12:53:43.046Z"
+    }
+  ],
+  "negative": [],
+  "result": "PASS",
+  "completedAt": "2026-11-04T12:53:43.046Z"
+}

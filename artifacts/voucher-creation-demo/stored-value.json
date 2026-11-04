@@ -1,0 +1,260 @@
+{
+  "flow": "stored-value",
+  "startedAt": "2026-11-04T12:53:42.433Z",
+  "steps": [
+    {
+      "actor": "Owner",
+      "action": "Login and verify brand/store",
+      "expected": "BRAND_OWNER, APPROVED brand, active owned store",
+      "actual": "BRAND_OWNER, APPROVED, Highlands Lê Lợi (Demo)",
+      "result": "PASS",
+      "at": "2026-11-04T12:53:42.532Z"
+    },
+    {
+      "actor": "Owner",
+      "action": "Create STORED_VALUE",
+      "expected": "DRAFT with correct financial fields",
+      "actual": "DRAFT",
+      "result": "PASS",
+      "at": "2026-11-04T12:53:42.636Z"
+    },
+    {
+      "actor": "Public",
+      "action": "Catalog at DRAFT",
+      "expected": "hidden",
+      "actual": "hidden",
+      "result": "PASS",
+      "at": "2026-11-04T12:53:42.640Z"
+    },
+    {
+      "actor": "Owner",
+      "action": "Submit for approval",
+      "expected": "PENDING",
+      "actual": "PENDING",
+      "result": "PASS",
+      "at": "2026-11-04T12:53:42.654Z"
+    },
+    {
+      "actor": "Public",
+      "action": "Catalog at PENDING",
+      "expected": "hidden",
+      "actual": "hidden",
+      "result": "PASS",
+      "at": "2026-11-04T12:53:42.658Z"
+    },
+    {
+      "actor": "Admin",
+      "action": "Inspect pending campaign",
+      "expected": "Matching title/type/price/terms/quantity/dates",
+      "actual": "DEMO Stored Value 200K",
+      "result": "PASS",
+      "at": "2026-11-04T12:53:42.738Z"
+    },
+    {
+      "actor": "Admin",
+      "action": "Approve with current sale window",
+      "expected": "APPROVED then automatic PUBLISHED",
+      "actual": "PUBLISHED",
+      "result": "PASS",
+      "at": "2026-11-04T12:53:42.754Z"
+    },
+    {
+      "actor": "Public",
+      "action": "Catalog and public detail",
+      "expected": "Visible, 100 available, canPurchase=true",
+      "actual": "visible; canPurchase=true; no purchase performed",
+      "result": "PASS",
+      "at": "2026-11-04T12:53:42.760Z"
+    }
+  ],
+  "negative": [
+    {
+      "case": "Owner outside brand",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "case": "faceValue=0",
+      "expected": 400,
+      "actual": 400,
+      "message": "Mệnh giá phải lớn hơn 0 và không nhỏ hơn giá bán.",
+      "result": "PASS"
+    },
+    {
+      "case": "salePrice=0",
+      "expected": 400,
+      "actual": 400,
+      "message": "Giá bán phải là số nguyên VND lớn hơn 0 trong giới hạn an toàn.",
+      "result": "PASS"
+    },
+    {
+      "case": "salePrice>faceValue",
+      "expected": 400,
+      "actual": 400,
+      "message": "Mệnh giá phải lớn hơn 0 và không nhỏ hơn giá bán.",
+      "result": "PASS"
+    },
+    {
+      "case": "quantity=0",
+      "expected": 400,
+      "actual": 400,
+      "message": "Số lượng và giới hạn mua phải là số nguyên dương.",
+      "result": "PASS"
+    },
+    {
+      "case": "cashback fields on stored-value",
+      "expected": 400,
+      "actual": 400,
+      "message": "Voucher mệnh giá không được chứa cấu hình Cashback.",
+      "result": "PASS"
+    },
+    {
+      "case": "Owner cannot self-approve or assign PUBLISHED",
+      "expected": "DRAFT; approvedBy=null; Admin API 403",
+      "actual": "DRAFT; approvedBy=null; Admin API 403",
+      "result": "PASS"
+    }
+  ],
+  "payload": {
+    "title": "DEMO Stored Value 200K",
+    "voucherType": "STORED_VALUE",
+    "description": "Voucher mệnh giá 200.000 VND, bán với giá 170.000 VND.",
+    "salePrice": 170000,
+    "totalQuantity": 100,
+    "limitPerUser": 1,
+    "storeIds": [
+      "6aeb2a222f3ca051958fa3a8"
+    ],
+    "categoryId": "6aeb2a222f3ca051958fa3a4",
+    "saleStartAt": "2026-11-04T11:53:42.532Z",
+    "saleEndAt": "2026-11-11T12:53:42.532Z",
+    "voucherExpireAt": "2026-11-25T12:53:42.532Z",
+    "terms": "Voucher dùng để thanh toán tại Merchant, sử dụng một lần, không hoàn phần giá trị dư; hóa đơn phải có giá trị tối thiểu bằng mệnh giá.",
+    "faceValue": 200000
+  },
+  "campaign": {
+    "id": "6aeb2ad62f3ca051958fa88d",
+    "brandId": "6aeb2a222f3ca051958fa3a6",
+    "type": "STORED_VALUE",
+    "salePrice": 170000,
+    "faceValue": 200000,
+    "savingAmount": 30000,
+    "cashbackPercentage": null,
+    "maxCashbackAmount": null,
+    "totalQuantity": 100,
+    "beforeApproval": "PENDING",
+    "afterApproval": "PUBLISHED",
+    "detailUrl": "http://localhost:5183/campaigns/6aeb2ad62f3ca051958fa88d",
+    "visibility": true,
+    "canPurchase": true
+  },
+  "catalog": {
+    "brandId": "6aeb2a222f3ca051958fa3a6",
+    "categoryId": "6aeb2a222f3ca051958fa3a4",
+    "title": "DEMO Stored Value 200K",
+    "description": "Voucher mệnh giá 200.000 VND, bán với giá 170.000 VND.",
+    "terms": "Voucher dùng để thanh toán tại Merchant, sử dụng một lần, không hoàn phần giá trị dư; hóa đơn phải có giá trị tối thiểu bằng mệnh giá.",
+    "voucherType": "STORED_VALUE",
+    "salePrice": 170000,
+    "faceValue": 200000,
+    "cashbackType": null,
+    "cashbackValue": null,
+    "maxCashbackAmount": null,
+    "minOrderValue": null,
+    "refundMethod": null,
+    "discountType": null,
+    "discountValue": null,
+    "maxDiscount": null,
+    "comboItems": null,
+    "totalQuantity": 100,
+    "soldQuantity": 0,
+    "reservedQuantity": 0,
+    "limitPerUser": 1,
+    "saleStartAt": "2026-11-04T11:53:42.532Z",
+    "saleEndAt": "2026-11-11T12:53:42.532Z",
+    "voucherExpireAt": "2026-11-25T12:53:42.532Z",
+    "status": "PUBLISHED",
+    "submittedAt": "2026-11-04T12:53:42.653Z",
+    "approvedAt": "2026-11-04T12:53:42.741Z",
+    "storeIds": [
+      "6aeb2a222f3ca051958fa3a8"
+    ],
+    "createdAt": "2026-11-04T12:53:42.634Z",
+    "updatedAt": "2026-11-04T12:53:42.743Z",
+    "id": "6aeb2ad62f3ca051958fa88d",
+    "brand": {
+      "id": "6aeb2a222f3ca051958fa3a6",
+      "name": "Highlands Coffee",
+      "logo": null
+    },
+    "availableQuantity": 100,
+    "discountPercent": 15,
+    "soldOut": false,
+    "canPurchase": true,
+    "favorited": false
+  },
+  "publicDetail": {
+    "brandId": "6aeb2a222f3ca051958fa3a6",
+    "categoryId": "6aeb2a222f3ca051958fa3a4",
+    "title": "DEMO Stored Value 200K",
+    "description": "Voucher mệnh giá 200.000 VND, bán với giá 170.000 VND.",
+    "terms": "Voucher dùng để thanh toán tại Merchant, sử dụng một lần, không hoàn phần giá trị dư; hóa đơn phải có giá trị tối thiểu bằng mệnh giá.",
+    "voucherType": "STORED_VALUE",
+    "salePrice": 170000,
+    "faceValue": 200000,
+    "cashbackType": null,
+    "cashbackValue": null,
+    "maxCashbackAmount": null,
+    "minOrderValue": null,
+    "refundMethod": null,
+    "discountType": null,
+    "discountValue": null,
+    "maxDiscount": null,
+    "comboItems": null,
+    "totalQuantity": 100,
+    "soldQuantity": 0,
+    "reservedQuantity": 0,
+    "limitPerUser": 1,
+    "saleStartAt": "2026-11-04T11:53:42.532Z",
+    "saleEndAt": "2026-11-11T12:53:42.532Z",
+    "voucherExpireAt": "2026-11-25T12:53:42.532Z",
+    "status": "PUBLISHED",
+    "submittedAt": "2026-11-04T12:53:42.653Z",
+    "approvedAt": "2026-11-04T12:53:42.741Z",
+    "storeIds": [
+      "6aeb2a222f3ca051958fa3a8"
+    ],
+    "createdAt": "2026-11-04T12:53:42.634Z",
+    "updatedAt": "2026-11-04T12:53:42.743Z",
+    "id": "6aeb2ad62f3ca051958fa88d",
+    "brand": {
+      "id": "6aeb2a222f3ca051958fa3a6",
+      "name": "Highlands Coffee",
+      "logo": null
+    },
+    "availableQuantity": 100,
+    "discountPercent": 15,
+    "soldOut": false,
+    "canPurchase": true,
+    "stores": [
+      {
+        "id": "6aeb2a222f3ca051958fa3a8",
+        "name": "Highlands Lê Lợi (Demo)",
+        "address": "Chi nhánh mẫu trong database test",
+        "distanceKm": null
+      }
+    ],
+    "favorited": false,
+    "refundPolicy": {
+      "windowDays": 7,
+      "minDaysBeforeExpiry": 3,
+      "description": "Voucher chưa sử dụng được yêu cầu hoàn trước mốc sớm hơn giữa 7 ngày kể từ thanh toán và 3 ngày trước hạn sử dụng."
+    },
+    "reviewCount": 0,
+    "averageRating": null,
+    "reviews": []
+  },
+  "result": "PASS",
+  "completedAt": "2026-11-04T12:53:42.764Z"
+}

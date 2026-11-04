@@ -1,0 +1,11 @@
+{
+  "backend": "http://127.0.0.1:3101",
+  "frontend": "http://localhost:5183",
+  "database": "voucher_creation_demo",
+  "brandId": "6aeb2a222f3ca051958fa3a6",
+  "storeId": "6aeb2a222f3ca051958fa3a8",
+  "accounts": {
+    "owner": "owner@highlands.local",
+    "admin": "admin@voucher.local"
+  }
+}

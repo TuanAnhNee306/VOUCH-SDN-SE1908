@@ -1,0 +1,264 @@
+{
+  "flow": "cashback",
+  "startedAt": "2026-11-04T12:52:51.113Z",
+  "steps": [
+    {
+      "actor": "Owner",
+      "action": "Login and verify brand/store",
+      "expected": "BRAND_OWNER, APPROVED brand, active owned store",
+      "actual": "BRAND_OWNER, APPROVED, Highlands Lê Lợi (Demo)",
+      "result": "PASS",
+      "at": "2026-11-04T12:52:51.237Z"
+    },
+    {
+      "actor": "Owner",
+      "action": "Create CASHBACK",
+      "expected": "DRAFT with correct financial fields",
+      "actual": "DRAFT",
+      "result": "PASS",
+      "at": "2026-11-04T12:52:51.347Z"
+    },
+    {
+      "actor": "Public",
+      "action": "Catalog at DRAFT",
+      "expected": "hidden",
+      "actual": "hidden",
+      "result": "PASS",
+      "at": "2026-11-04T12:52:51.353Z"
+    },
+    {
+      "actor": "Owner",
+      "action": "Submit for approval",
+      "expected": "PENDING",
+      "actual": "PENDING",
+      "result": "PASS",
+      "at": "2026-11-04T12:52:51.370Z"
+    },
+    {
+      "actor": "Public",
+      "action": "Catalog at PENDING",
+      "expected": "hidden",
+      "actual": "hidden",
+      "result": "PASS",
+      "at": "2026-11-04T12:52:51.374Z"
+    },
+    {
+      "actor": "Admin",
+      "action": "Inspect pending campaign",
+      "expected": "Matching title/type/price/terms/quantity/dates",
+      "actual": "DEMO Cashback 50% - Electronics",
+      "result": "PASS",
+      "at": "2026-11-04T12:52:51.442Z"
+    },
+    {
+      "actor": "Admin",
+      "action": "Approve with current sale window",
+      "expected": "APPROVED then automatic PUBLISHED",
+      "actual": "PUBLISHED",
+      "result": "PASS",
+      "at": "2026-11-04T12:52:51.454Z"
+    },
+    {
+      "actor": "Public",
+      "action": "Catalog and public detail",
+      "expected": "Visible, 100 available, canPurchase=true",
+      "actual": "visible; canPurchase=true; no purchase performed",
+      "result": "PASS",
+      "at": "2026-11-04T12:52:51.462Z"
+    }
+  ],
+  "negative": [
+    {
+      "case": "Owner outside brand",
+      "expected": 403,
+      "actual": 403,
+      "result": "PASS"
+    },
+    {
+      "case": "salePrice=0",
+      "expected": 400,
+      "actual": 400,
+      "message": "Giá bán phải là số nguyên VND lớn hơn 0 trong giới hạn an toàn.",
+      "result": "PASS"
+    },
+    {
+      "case": "cashbackValue=0",
+      "expected": 400,
+      "actual": 400,
+      "message": "Giá trị Cashback phải lớn hơn 0.",
+      "result": "PASS"
+    },
+    {
+      "case": "cashbackValue=101",
+      "expected": 400,
+      "actual": 400,
+      "message": "Tỷ lệ Cashback không được vượt 100%.",
+      "result": "PASS"
+    },
+    {
+      "case": "negative cap",
+      "expected": 400,
+      "actual": 400,
+      "message": "Mức hoàn tối đa phải lớn hơn 0.",
+      "result": "PASS"
+    },
+    {
+      "case": "quantity=0",
+      "expected": 400,
+      "actual": 400,
+      "message": "Số lượng và giới hạn mua phải là số nguyên dương.",
+      "result": "PASS"
+    },
+    {
+      "case": "Owner cannot self-approve or assign PUBLISHED",
+      "expected": "DRAFT; approvedBy=null; Admin API 403",
+      "actual": "DRAFT; approvedBy=null; Admin API 403",
+      "result": "PASS"
+    }
+  ],
+  "payload": {
+    "title": "DEMO Cashback 50% - Electronics",
+    "voucherType": "CASHBACK",
+    "description": "Hoàn 50% cho hóa đơn đủ điều kiện. Chương trình giả định trong môi trường demo.",
+    "salePrice": 300000,
+    "totalQuantity": 100,
+    "limitPerUser": 1,
+    "storeIds": [
+      "6aeb2a222f3ca051958fa3a8"
+    ],
+    "categoryId": "6aeb2a222f3ca051958fa3a4",
+    "saleStartAt": "2026-11-04T11:52:51.237Z",
+    "saleEndAt": "2026-11-11T12:52:51.237Z",
+    "voucherExpireAt": "2026-11-25T12:52:51.237Z",
+    "terms": "Customer thanh toán đầy đủ hóa đơn tại Merchant; Merchant trực tiếp hoàn Cashback bằng tiền mặt hoặc chuyển khoản sau khi xác minh điều kiện. Marketplace không chi trả khoản Cashback.",
+    "cashbackType": "PERCENTAGE",
+    "cashbackValue": 50,
+    "maxCashbackAmount": 5000000,
+    "minOrderValue": 1000000,
+    "refundMethod": "Tiền mặt hoặc chuyển khoản ngân hàng"
+  },
+  "campaign": {
+    "id": "6aeb2aa32f3ca051958fa6df",
+    "brandId": "6aeb2a222f3ca051958fa3a6",
+    "type": "CASHBACK",
+    "salePrice": 300000,
+    "faceValue": null,
+    "savingAmount": null,
+    "cashbackPercentage": 50,
+    "maxCashbackAmount": 5000000,
+    "totalQuantity": 100,
+    "beforeApproval": "PENDING",
+    "afterApproval": "PUBLISHED",
+    "detailUrl": "http://localhost:5183/campaigns/6aeb2aa32f3ca051958fa6df",
+    "visibility": true,
+    "canPurchase": true
+  },
+  "catalog": {
+    "brandId": "6aeb2a222f3ca051958fa3a6",
+    "categoryId": "6aeb2a222f3ca051958fa3a4",
+    "title": "DEMO Cashback 50% - Electronics",
+    "description": "Hoàn 50% cho hóa đơn đủ điều kiện. Chương trình giả định trong môi trường demo.",
+    "terms": "Customer thanh toán đầy đủ hóa đơn tại Merchant; Merchant trực tiếp hoàn Cashback bằng tiền mặt hoặc chuyển khoản sau khi xác minh điều kiện. Marketplace không chi trả khoản Cashback.",
+    "voucherType": "CASHBACK",
+    "salePrice": 300000,
+    "faceValue": null,
+    "cashbackType": "PERCENTAGE",
+    "cashbackValue": 50,
+    "maxCashbackAmount": 5000000,
+    "minOrderValue": 1000000,
+    "refundMethod": "Tiền mặt hoặc chuyển khoản ngân hàng",
+    "discountType": null,
+    "discountValue": null,
+    "maxDiscount": null,
+    "comboItems": null,
+    "totalQuantity": 100,
+    "soldQuantity": 0,
+    "reservedQuantity": 0,
+    "limitPerUser": 1,
+    "saleStartAt": "2026-11-04T11:52:51.237Z",
+    "saleEndAt": "2026-11-11T12:52:51.237Z",
+    "voucherExpireAt": "2026-11-25T12:52:51.237Z",
+    "status": "PUBLISHED",
+    "submittedAt": "2026-11-04T12:52:51.369Z",
+    "approvedAt": "2026-11-04T12:52:51.446Z",
+    "storeIds": [
+      "6aeb2a222f3ca051958fa3a8"
+    ],
+    "createdAt": "2026-11-04T12:52:51.346Z",
+    "updatedAt": "2026-11-04T12:52:51.448Z",
+    "id": "6aeb2aa32f3ca051958fa6df",
+    "brand": {
+      "id": "6aeb2a222f3ca051958fa3a6",
+      "name": "Highlands Coffee",
+      "logo": null
+    },
+    "availableQuantity": 100,
+    "discountPercent": 0,
+    "soldOut": false,
+    "canPurchase": true,
+    "favorited": false
+  },
+  "publicDetail": {
+    "brandId": "6aeb2a222f3ca051958fa3a6",
+    "categoryId": "6aeb2a222f3ca051958fa3a4",
+    "title": "DEMO Cashback 50% - Electronics",
+    "description": "Hoàn 50% cho hóa đơn đủ điều kiện. Chương trình giả định trong môi trường demo.",
+    "terms": "Customer thanh toán đầy đủ hóa đơn tại Merchant; Merchant trực tiếp hoàn Cashback bằng tiền mặt hoặc chuyển khoản sau khi xác minh điều kiện. Marketplace không chi trả khoản Cashback.",
+    "voucherType": "CASHBACK",
+    "salePrice": 300000,
+    "faceValue": null,
+    "cashbackType": "PERCENTAGE",
+    "cashbackValue": 50,
+    "maxCashbackAmount": 5000000,
+    "minOrderValue": 1000000,
+    "refundMethod": "Tiền mặt hoặc chuyển khoản ngân hàng",
+    "discountType": null,
+    "discountValue": null,
+    "maxDiscount": null,
+    "comboItems": null,
+    "totalQuantity": 100,
+    "soldQuantity": 0,
+    "reservedQuantity": 0,
+    "limitPerUser": 1,
+    "saleStartAt": "2026-11-04T11:52:51.237Z",
+    "saleEndAt": "2026-11-11T12:52:51.237Z",
+    "voucherExpireAt": "2026-11-25T12:52:51.237Z",
+    "status": "PUBLISHED",
+    "submittedAt": "2026-11-04T12:52:51.369Z",
+    "approvedAt": "2026-11-04T12:52:51.446Z",
+    "storeIds": [
+      "6aeb2a222f3ca051958fa3a8"
+    ],
+    "createdAt": "2026-11-04T12:52:51.346Z",
+    "updatedAt": "2026-11-04T12:52:51.448Z",
+    "id": "6aeb2aa32f3ca051958fa6df",
+    "brand": {
+      "id": "6aeb2a222f3ca051958fa3a6",
+      "name": "Highlands Coffee",
+      "logo": null
+    },
+    "availableQuantity": 100,
+    "discountPercent": 0,
+    "soldOut": false,
+    "canPurchase": true,
+    "stores": [
+      {
+        "id": "6aeb2a222f3ca051958fa3a8",
+        "name": "Highlands Lê Lợi (Demo)",
+        "address": "Chi nhánh mẫu trong database test",
+        "distanceKm": null
+      }
+    ],
+    "favorited": false,
+    "refundPolicy": {
+      "windowDays": 7,
+      "minDaysBeforeExpiry": 3,
+      "description": "Voucher chưa sử dụng được yêu cầu hoàn trước mốc sớm hơn giữa 7 ngày kể từ thanh toán và 3 ngày trước hạn sử dụng."
+    },
+    "reviewCount": 0,
+    "averageRating": null,
+    "reviews": []
+  },
+  "result": "PASS",
+  "completedAt": "2026-11-04T12:52:51.465Z"
+}
