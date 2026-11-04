@@ -140,10 +140,25 @@ export function Logo({ size = 'md' }) {
   return <span className={`logo logo-${size}`}>vouch<span>.</span></span>;
 }
 
-export function CampaignImage({ src, className = '' }) {
+export function CampaignImage({ src, className = '', fallbackLabel = '' }) {
+  const [failed, setFailed] = useState(false);
+  const initials = fallbackLabel
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase();
+
   return (
     <div className={`cimg ${className}`}>
-      {src ? <img src={src} alt="" /> : <span className="cimg-icon">🏷️</span>}
+      {src && !failed ? (
+        <img src={src} alt={fallbackLabel} onError={() => setFailed(true)} />
+      ) : fallbackLabel ? (
+        <span className="brand-fallback" aria-label={fallbackLabel}>{initials || fallbackLabel.slice(0, 2).toUpperCase()}</span>
+      ) : (
+        <span className="cimg-icon">🏷️</span>
+      )}
     </div>
   );
 }

@@ -133,6 +133,7 @@ input, select, textarea, button { font: inherit; }
 .cimg-icon { font-size: 34px; opacity: .55; }
 .cimg.brand-art { background: linear-gradient(135deg, #eff8f5, #d9eee7); }
 .cimg.brand-art img { width: 62%; height: 62%; object-fit: contain; filter: drop-shadow(0 5px 8px rgba(10, 80, 60, .14)); }
+.brand-fallback { display: grid; place-items: center; min-width: 74px; min-height: 74px; padding: 10px; border-radius: 50%; background: linear-gradient(135deg, #087f6b, #0e9f88); color: #fff; font-weight: 900; font-size: 23px; letter-spacing: .04em; box-shadow: 0 8px 18px rgba(4, 90, 73, .25); }
 
 /* ================= App khach hang (giao dien di dong) ================= */
 .phone { max-width: 480px; margin: 0 auto; min-height: 100vh; background: var(--bg); position: relative; padding-bottom: 72px; box-shadow: 0 0 30px rgba(0,0,0,.06); }

@@ -22,7 +22,11 @@ export function VoucherCard({ c, onClick }) {
 
   return (
     <div className={`vcard ${favorited ? 'fav' : ''}`} onClick={onClick} role="button" tabIndex={0}>
-      <CampaignImage src={c.image || c.brand?.logo} className={!c.image && c.brand?.logo ? 'brand-art' : ''} />
+      <CampaignImage
+        src={c.image || c.brand?.logo}
+        className={!c.image && c.brand?.logo ? 'brand-art' : ''}
+        fallbackLabel={c.brand?.name}
+      />
       {c.discountPercent > 0 && <span className="disc">-{c.discountPercent}%</span>}
       <button type="button" className="fav-btn" disabled={busy} onClick={toggleFavorite} aria-label={favorited ? 'Bỏ yêu thích' : 'Yêu thích'} title={favorited ? 'Bỏ yêu thích' : 'Yêu thích'}>
         {favorited ? '❤️' : '🤍'}
@@ -32,7 +36,7 @@ export function VoucherCard({ c, onClick }) {
         <div className="vtitle">{c.title}</div>
         {c.brand && (
           <div className="brand-mini">
-            {c.brand.logo && <img src={c.brand.logo} alt="" />}
+            {c.brand.logo && <img src={c.brand.logo} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} />}
             <span className="ellipsis">{c.brand.name}</span>
           </div>
         )}
