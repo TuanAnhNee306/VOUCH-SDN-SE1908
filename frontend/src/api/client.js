@@ -1,5 +1,10 @@
 import { useSyncExternalStore } from 'react';
 
+// Khi deploy frontend tách riêng backend, đặt VITE_API_URL=https://<backend>.onrender.com.
+// Để trống khi chạy Vite proxy/local backend cùng origin.
+const apiOrigin = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const apiUrl = (path) => `${apiOrigin}/api${path}`;
+
 // Moi khu vuc (app khach hang / web) giu phien rieng trong localStorage,
 // nen co the mo app khach va web cua hang cung luc tren mot trinh duyet.
 export class ApiError extends Error {
@@ -38,7 +43,7 @@ function createClient(storageKey) {
   function refresh() {
     if (!session?.refreshToken) return Promise.resolve(false);
     if (!refreshing) {
-      refreshing = fetch('/api/auth/refresh', {
+      refreshing = fetch(apiUrl('/auth/refresh'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken: session.refreshToken }),
@@ -62,7 +67,7 @@ function createClient(storageKey) {
     if (session?.accessToken) headers.Authorization = `Bearer ${session.accessToken}`;
     let res;
     try {
-      res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+      res = await fetch(apiUrl(path), { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
     } catch {
       throw new ApiError('Không kết nối được máy chủ. Kiểm tra backend đã chạy chưa.', { status: 0, code: 'NETWORK' });
     }
