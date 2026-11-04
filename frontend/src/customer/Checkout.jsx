@@ -146,9 +146,14 @@ export function PaymentResult() {
                 </div>
               </>
             )}
-            {!paymentUrl && !config.data?.paymentSimulator && (
+            {!paymentUrl && config.data && !config.data.paymentSimulator && (config.data.vnpayConfigured ? (
               <button type="button" className="btn btn-block" disabled={busy} onClick={retry}>Tiếp tục thanh toán</button>
-            )}
+            ) : (
+              <div className="alert alert-warn small" style={{ textAlign: 'left' }}>
+                Máy chủ chưa cấu hình cổng thanh toán VNPAY và đang tắt chế độ thanh toán thử.
+                Đặt <span className="mono">PAYMENT_SIMULATOR=true</span> (hoặc khai báo VNPAY) trong <span className="mono">backend/.env</span> rồi khởi động lại backend.
+              </div>
+            ))}
             <button type="button" className="btn btn-ghost btn-block" onClick={() => order.reload()}>⟳ Kiểm tra lại</button>
           </div>
         )}
@@ -172,7 +177,11 @@ export function PaymentReturn() {
   const params = new URLSearchParams(window.location.search);
   const code = params.get('vnp_TxnRef') || params.get('orderCode');
   useEffect(() => {
-    if (!session) return;
+    // Phien het han trong luc o trang VNPAY: dang nhap lai roi quay ve dung trang nay (khong quay vong mai)
+    if (!session) {
+      navigate(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`, { replace: true });
+      return;
+    }
     const signedReturn = params.has('vnp_SecureHash')
       ? customerApi.get(`/orders/vnpay-return?${params.toString()}`).catch(() => null)
       : Promise.resolve();

@@ -37,6 +37,9 @@ function QrScanner({ onResult }) {
   const [on, setOn] = useState(false);
   const [err, setErr] = useState(null);
   const ref = useRef(null);
+  // Giu callback moi nhat trong ref: neu de trong deps thi moi lan trang cha render lai (go hoa don...) camera bi tat / bat lai
+  const onResultRef = useRef(onResult);
+  onResultRef.current = onResult;
   useEffect(() => {
     if (!on) return undefined;
     let scanner;
@@ -47,7 +50,7 @@ function QrScanner({ onResult }) {
       ref.current = scanner;
       scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 220 }, (text) => {
         setOn(false);
-        onResult(text);
+        onResultRef.current(text);
       }).catch(() => {
         setErr('Không mở được camera. Hãy cấp quyền camera hoặc dán nội dung mã QR bên dưới.');
         setOn(false);
@@ -57,7 +60,7 @@ function QrScanner({ onResult }) {
       stopped = true;
       scanner?.stop().then(() => scanner.clear()).catch(() => {});
     };
-  }, [on, onResult]);
+  }, [on]);
   return (
     <div>
       <div id="qr-reader" className="scanner" style={{ display: on ? 'block' : 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -122,11 +125,14 @@ export function StoreRedeem() {
       setPending(null);
       setOtp('');
       setQrText('');
+      // Hoa don thuoc ve luot vua xac nhan: xoa de khong gan nham cho khach tiep theo
+      setBill('');
     } catch (error) {
       if (error.code === 'BILL_REQUIRED') setPending(code);
       else {
         setPending(null);
         setResult({ ok: false, error });
+        setBill('');
       }
       if (error.code === 'STORE_NOT_SELECTED') navigate('/web/store/select');
     } finally {

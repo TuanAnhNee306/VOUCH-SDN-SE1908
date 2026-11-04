@@ -550,3 +550,80 @@ test('Dang nhap web: bao so lan thu con lai, khoa sau 5 lan sai, dang nhap dung 
   const customer = await api('POST', '/auth/login', { email: 'khach@voucher.local', password: 'x' });
   assert.match(customer.body.message, /OTP/);
 });
+
+// ===================== Hoi quy cho cac loi da sua =====================
+
+test('Don qua han giu cho bi huy ngay khi khach xem don / dat lai, khong doi job 5 phut', async () => {
+  const token = await otpLogin('khach-giucho@voucher.local');
+  const c = await campaignByTitle('Trà sữa Phúc Long mua 1 tặng 1');
+  const first = await api('POST', '/orders', { campaignId: String(c._id), quantity: 5 }, token);
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+  const reserved = (await M.Campaign.findById(c._id)).reservedQuantity;
+  await M.Order.updateOne({ _id: first.body.order.id }, { reservedUntil: new Date(Date.now() - 1000) });
+
+  // Man ket qua dang poll thay ngay CANCELLED va ton kho duoc nha
+  const viewed = await api('GET', `/orders/${first.body.order.id}`, undefined, token);
+  assert.equal(viewed.body.status, 'CANCELLED');
+  assert.equal((await M.Campaign.findById(c._id)).reservedQuantity, reserved - 5);
+
+  // Don het han khong con chiem gioi han 5 voucher / nguoi
+  const second = await api('POST', '/orders', { campaignId: String(c._id), quantity: 5 }, token);
+  assert.equal(second.status, 201, JSON.stringify(second.body));
+  await M.Order.updateOne({ _id: second.body.order.id }, { reservedUntil: new Date(Date.now() - 1000) });
+  const third = await api('POST', '/orders', { campaignId: String(c._id), quantity: 5 }, token);
+  assert.equal(third.status, 201, JSON.stringify(third.body));
+  assert.equal((await M.Order.findById(second.body.order.id)).status, 'CANCELLED');
+  await api('POST', `/orders/${third.body.order.id}/simulate-payment`, { result: 'failed' }, token);
+});
+
+test('Doi soat: voucher mua cuoi ky con quyen hoan luc chot duoc gom vao ky sau, khong bi bo sot', async () => {
+  const v = await buyOne(customer2, 'Phiếu mua mỹ phẩm 300.000đ');
+  const t1 = new Date(Date.now() + 400 * 864e5);
+  const t0 = new Date(t1.getTime() - 30 * 864e5);
+  const t2 = new Date(t1.getTime() + 30 * 864e5);
+  const paidAt = new Date(t1.getTime() - 864e5);
+  await M.Order.updateOne({ _id: v.orderId }, { paidAt });
+  await M.VoucherItem.updateOne({ _id: v.id }, { issuedAt: paidAt, refundableUntil: new Date(paidAt.getTime() + 7 * 864e5), expireAt: new Date(t2.getTime() + 60 * 864e5) });
+
+  // Chot ky 1: con quyen hoan -> chua gom
+  await settlements.runSettlement(t0, t1, t1);
+  assert.equal((await M.VoucherItem.findById(v.id)).settlementId, null);
+  // Chot ky 2: da het quyen hoan -> gom vao phieu ky 2, dung ty le hoa hong chot luc thanh toan
+  await settlements.runSettlement(t1, t2, t2);
+  const after = await M.VoucherItem.findById(v.id);
+  assert.ok(after.settlementId, 'voucher phai vao phieu ky sau');
+  const s = await M.Settlement.findById(after.settlementId);
+  const line = s.items.find((i) => String(i.voucherItemId) === v.id);
+  assert.equal(line.amount, v.unitPrice);
+  assert.equal(line.commissionRate, (await M.Order.findById(v.orderId)).commissionRate);
+});
+
+test('Chien dich: khong duyet khi thuong hieu bi dinh chi; da duyet ma qua han ban -> ENDED; khong ha so luong duoi so dang giu', async () => {
+  const brand = (await api('GET', '/brand/me', undefined, owner)).body[0];
+  const stores = (await api('GET', `/brand/${brand.id}/stores`, undefined, owner)).body;
+  const now = Date.now();
+  const payload = {
+    title: 'Kiểm thử duyệt', voucherType: 'COMBO', comboItems: '1 cà phê', salePrice: 20000, faceValue: 30000,
+    totalQuantity: 10, saleStartAt: new Date(now - 3600e3).toISOString(), saleEndAt: new Date(now + 5 * 864e5).toISOString(),
+    voucherExpireAt: new Date(now + 20 * 864e5).toISOString(), storeIds: [stores[0].id],
+  };
+  const { body: draft } = await api('POST', `/brand/${brand.id}/campaigns`, payload, owner);
+
+  await M.Campaign.updateOne({ _id: draft.id }, { reservedQuantity: 3 });
+  const lower = await api('PATCH', `/brand/${brand.id}/campaigns/${draft.id}`, { totalQuantity: 2 }, owner);
+  assert.equal(lower.status, 400);
+  assert.match(lower.body.message, /đang giữ chỗ/);
+  await M.Campaign.updateOne({ _id: draft.id }, { reservedQuantity: 0 });
+
+  await api('PATCH', `/brand/${brand.id}/campaigns/${draft.id}/submit`, undefined, owner);
+  await api('PATCH', `/admin/brands/${brand.id}/suspend`, { reason: 'Kiểm thử' }, admin);
+  const blocked = await api('PATCH', `/admin/campaigns/${draft.id}/approve`, undefined, admin);
+  assert.equal(blocked.status, 400);
+  assert.match(blocked.body.message, /đình chỉ/);
+  await api('PATCH', `/admin/brands/${brand.id}/reinstate`, undefined, admin);
+
+  await M.Campaign.updateOne({ _id: draft.id }, { status: 'APPROVED' });
+  const campaigns = require('../src/services/campaign');
+  await campaigns.runStatusTransitions(new Date(now + 6 * 864e5), draft.id);
+  assert.equal((await M.Campaign.findById(draft.id)).status, 'ENDED');
+});

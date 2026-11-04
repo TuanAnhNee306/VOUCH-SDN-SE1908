@@ -7,6 +7,7 @@ import { dateTime, money, REFUND_STATUS, VOUCHER_STATUS_TONE } from '../utils/fo
 import { valueText } from './Campaign';
 import { TopBar } from './Layout';
 
+const AUTO_REFRESH_MAX = 5;
 const TABS = [['ACTIVE', 'Đang hiệu lực'], ['USED', 'Đã dùng'], ['EXPIRED', 'Hết hạn'], ['REFUNDED', 'Đã hoàn']];
 
 // Vi xem duoc khi mat mang: luu ban sao danh sach gan nhat tren may
@@ -151,9 +152,16 @@ export function UseVoucher() {
   const [busy, setBusy] = useState(false);
   const voucher = useLoad(() => customerApi.get(`/wallet/${id}`), [id]);
   const busyRef = useRef(false);
+  // May chu chi cho tao 10 ma / 10 phut: tu lam moi toi da AUTO_REFRESH_MAX lan lien tiep,
+  // sau do cho khach bam "Lam moi ma" de man hinh de mo lau khong dot het luot va bao loi
+  const autoCount = useRef(0);
+  const [paused, setPaused] = useState(false);
 
-  const issue = useCallback(async () => {
+  const issue = useCallback(async (auto = false) => {
     if (busyRef.current) return;
+    if (auto) autoCount.current += 1;
+    else autoCount.current = 0;
+    setPaused(false);
     busyRef.current = true;
     setBusy(true);
     try {
@@ -179,7 +187,9 @@ export function UseVoucher() {
     const tick = () => {
       const s = Math.max(0, Math.ceil((new Date(token.expiresAt) - Date.now()) / 1000));
       setLeft(s);
-      if (s === 0) issue();
+      if (s > 0) return;
+      if (autoCount.current >= AUTO_REFRESH_MAX) setPaused(true);
+      else issue(true);
     };
     tick();
     const t = setInterval(tick, 1000);
@@ -232,12 +242,12 @@ export function UseVoucher() {
           </>
         ) : !token ? <Spinner text="Đang tạo mã..." /> : (
           <>
-            <div className="qr-box mt"><QRCodeSVG value={token.qrPayload} size={220} level="M" /></div>
-            <div className="countdown">{left > 0 ? `Còn hiệu lực ${left}s` : 'Đang làm mới mã...'}</div>
+            <div className="qr-box mt" style={paused ? { opacity: 0.25 } : undefined}><QRCodeSVG value={token.qrPayload} size={220} level="M" /></div>
+            <div className="countdown">{left > 0 ? `Còn hiệu lực ${left}s` : paused ? 'Mã đã hết hiệu lực, bấm "Làm mới mã" khi tới quầy' : 'Đang làm mới mã...'}</div>
             <div className="small muted mt">Mã OTP thay thế (nếu nhân viên không quét được QR)</div>
-            <div className="otp-big">{token.otpCode}</div>
+            <div className="otp-big" style={paused ? { opacity: 0.25, textDecoration: 'line-through' } : undefined}>{token.otpCode}</div>
             <p className="small muted">Mã tự làm mới sau mỗi 60 giây. Đưa mã cho nhân viên tại quầy, không gửi ảnh chụp mã cho người khác.</p>
-            <button type="button" className="btn btn-block mt" disabled={busy} onClick={issue}>Làm mới mã</button>
+            <button type="button" className="btn btn-block mt" disabled={busy} onClick={() => issue()}>Làm mới mã</button>
             <details className="small muted mt" style={{ textAlign: 'left' }}>
               <summary>Demo trên cùng một máy: sao chép nội dung mã QR</summary>
               <div className="mono" style={{ wordBreak: 'break-all', userSelect: 'all' }}>{token.qrPayload}</div>

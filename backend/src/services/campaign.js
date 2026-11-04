@@ -73,9 +73,10 @@ async function update(id, body) {
         throw badRequest('Không thể sửa giá bán, giá trị, loại voucher hoặc hạn sử dụng của chiến dịch đã bán được voucher (BR-17).');
       }
     }
-    if (data.totalQuantity !== undefined && data.totalQuantity < campaign.soldQuantity + campaign.reservedQuantity) {
-      throw badRequest('Số lượng phát hành không được nhỏ hơn số đã bán và đang giữ chỗ.');
-    }
+  }
+  // Chua ban duoc nhung dang co don giu cho cung khong duoc ha xuong duoi (DC-03)
+  if (data.totalQuantity !== undefined && data.totalQuantity < campaign.soldQuantity + campaign.reservedQuantity) {
+    throw badRequest('Số lượng phát hành không được nhỏ hơn số đã bán và đang giữ chỗ.');
   }
   const merged = { ...campaign.toObject(), ...data };
   if (merged.voucherType !== 'DISCOUNT') Object.assign(data, { discountType: null, discountValue: null, maxDiscount: null });
@@ -119,6 +120,10 @@ async function withdraw(id) {
 async function approve(id, adminUserId) {
   const campaign = await findOrFail(id);
   if (campaign.status !== CampaignStatus.PENDING) throw badRequest('Chỉ có thể duyệt chiến dịch đang chờ duyệt.');
+  // Thuong hieu bi dinh chi sau khi gui duyet: khong duoc phat hanh (BR-26)
+  const brand = await Brand.findById(campaign.brandId).select('status');
+  if (brand?.status !== BrandStatus.APPROVED) throw badRequest('Thương hiệu chưa được duyệt hoặc đang bị đình chỉ nên không thể duyệt chiến dịch (BR-26).');
+  if (campaign.saleEndAt.getTime() <= Date.now()) throw badRequest('Chiến dịch đã quá ngày kết thúc bán. Hãy từ chối để thương hiệu sửa lại thời gian.');
   validateValueFields(campaign);
   validateTimeline(campaign);
   campaign.status = CampaignStatus.APPROVED;
@@ -184,7 +189,7 @@ async function runStatusTransitions(now = new Date(), campaignId) {
   );
   // 4. Het thoi gian ban -> ENDED
   const ended = await Campaign.updateMany(
-    { ...scope, status: { $in: [CampaignStatus.PUBLISHED, CampaignStatus.PAUSED, CampaignStatus.SOLD_OUT] }, saleEndAt: { $lte: now } },
+    { ...scope, status: { $in: [CampaignStatus.APPROVED, CampaignStatus.PUBLISHED, CampaignStatus.PAUSED, CampaignStatus.SOLD_OUT] }, saleEndAt: { $lte: now } },
     { status: CampaignStatus.ENDED },
   );
 

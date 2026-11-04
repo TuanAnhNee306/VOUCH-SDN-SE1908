@@ -25,8 +25,10 @@ const newPaymentOrderCode = (now = Date.now()) => String(now * 1000 + crypto.ran
 async function createOrder(userId, { campaignId, quantity }, { ipAddress } = {}) {
   const q = Math.trunc(Number(quantity));
   if (!Number.isSafeInteger(q) || q < 1) throw badRequest('Số lượng phải là số nguyên lớn hơn 0.');
-  const campaign = await Campaign.findById(campaignId).catch(() => null);
+  let campaign = await Campaign.findById(campaignId).catch(() => null);
   if (!campaign) throw notFound('Không tìm thấy chiến dịch.');
+  // Don qua han giu cho ma job 5 phut chua quet toi: huy ngay de khong chiem ton kho va gioi han mua
+  if (await cancelExpiredOrders(new Date(), { campaignId: campaign._id })) campaign = await Campaign.findById(campaign._id);
   if (campaign.status !== CampaignStatus.PUBLISHED || !rules.isOnSale(campaign)) {
     throw badRequest('Chiến dịch không còn đang bán.', 'CAMPAIGN_NOT_ON_SALE');
   }
@@ -92,9 +94,14 @@ async function retryPayment(userId, orderId) {
 }
 
 async function findMyOrderDoc(userId, orderId) {
-  const order = await Order.findById(orderId).catch(() => null);
+  let order = await Order.findById(orderId).catch(() => null);
   if (!order) throw notFound('Không tìm thấy đơn hàng.');
   if (String(order.userId) !== String(userId)) throw forbidden('Bạn không có quyền xem đơn hàng này.');
+  // Man cho thanh toan thay ngay don het giu cho, khong phai doi job 5 phut
+  if (order.status === OrderStatus.PENDING && order.reservedUntil.getTime() <= Date.now()) {
+    await cancelExpiredOrders(new Date(), { _id: order._id });
+    order = await Order.findById(order._id);
+  }
   return order;
 }
 
@@ -104,6 +111,7 @@ async function present(order) {
 }
 
 async function findMyOrders(userId) {
+  await cancelExpiredOrders(new Date(), { userId });
   const orders = await Order.find({ userId }).sort({ createdAt: -1 });
   const campaigns = await Campaign.find({ _id: { $in: orders.map((o) => o.campaignId) } }).select('title image');
   const byId = new Map(campaigns.map((c) => [String(c._id), c.toJSON()]));
@@ -279,8 +287,8 @@ async function handleVnpayIpn(result) {
 }
 
 // ================= Tac vu nen: huy don qua 15 phut giu cho (FR-ORDER-03) =================
-async function cancelExpiredOrders(now = new Date()) {
-  const expired = await Order.find({ status: OrderStatus.PENDING, reservedUntil: { $lt: now } }).select('_id');
+async function cancelExpiredOrders(now = new Date(), scope = {}) {
+  const expired = await Order.find({ ...scope, status: OrderStatus.PENDING, reservedUntil: { $lte: now } }).select('_id');
   let cancelled = 0;
   for (const { _id } of expired) {
     // Webhook co the vua xu ly don nay: chi huy khi van PENDING

@@ -32,25 +32,34 @@ async function runSettlement(periodStart, periodEnd, now = new Date()) {
   const currentRate = await getCommissionRate();
   const created = [];
 
-  const paidOrders = await Order.find({ status: OrderStatus.FULFILLED, paidAt: { $gte: start, $lt: end } }).select('_id commissionRate');
-  const orderRate = new Map(paidOrders.map((o) => [String(o._id), o.commissionRate]));
-  if (paidOrders.length === 0) return created;
-
   const openRefundItems = await RefundRequest.distinct('voucherItemId', { status: { $in: OPEN_REFUND_STATUSES } });
+  // Voucher chua vao phieu nao va da het quyen hoan tai thoi diem chot
+  const candidates = await VoucherItem.find({
+    issuedAt: { $lt: end },
+    settlementId: null,
+    _id: { $nin: openRefundItems },
+    $or: [
+      { status: { $in: [VoucherItemStatus.USED, VoucherItemStatus.EXPIRED] } },
+      { status: VoucherItemStatus.ACTIVE, $or: [{ refundableUntil: { $lte: cutoff } }, { expireAt: { $lte: cutoff } }] },
+    ],
+  });
+  // Gom ca voucher cua don thanh toan o ky truoc ma luc chot ky do van con quyen hoan (mua cuoi thang):
+  // neu chi lay don thanh toan trong ky thi nhung voucher nay khong bao gio vao phieu nao.
+  const paidOrders = await Order.find({
+    _id: { $in: [...new Set(candidates.map((v) => String(v.orderId)))] }, status: OrderStatus.FULFILLED, paidAt: { $lt: end },
+  }).select('_id commissionRate');
+  const orderRate = new Map(paidOrders.map((o) => [String(o._id), o.commissionRate]));
+  const byBrand = new Map();
+  for (const v of candidates) {
+    if (!orderRate.has(String(v.orderId))) continue;
+    const key = String(v.brandId);
+    if (!byBrand.has(key)) byBrand.set(key, []);
+    byBrand.get(key).push(v);
+  }
 
-  const brands = await Brand.find();
+  const brands = await Brand.find({ _id: { $in: [...byBrand.keys()] } });
   for (const brand of brands) {
-    const items = await VoucherItem.find({
-      brandId: brand._id,
-      orderId: { $in: paidOrders.map((o) => o._id) },
-      settlementId: null,
-      _id: { $nin: openRefundItems },
-      $or: [
-        { status: { $in: [VoucherItemStatus.USED, VoucherItemStatus.EXPIRED] } },
-        { status: VoucherItemStatus.ACTIVE, $or: [{ refundableUntil: { $lte: cutoff } }, { expireAt: { $lte: cutoff } }] },
-      ],
-    });
-    if (items.length === 0) continue; // ky khong co voucher hop le thi khong sinh phieu
+    const items = byBrand.get(String(brand._id));
 
     const lines = items.map((v) => {
       const stored = orderRate.get(String(v.orderId));
