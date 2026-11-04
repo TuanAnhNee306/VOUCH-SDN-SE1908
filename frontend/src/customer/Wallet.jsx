@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Icon } from '../components/Icon';
+import { VoucherBenefit } from './MarketplaceUI';
 import { QRCodeSVG } from 'qrcode.react';
 import { customerApi, useSession } from '../api/client';
 import { Badge, Empty, ErrorBox, Spinner, useAction, useLoad, useToast } from '../components/ui';
@@ -8,7 +10,8 @@ import { valueText } from './Campaign';
 import { CashbackPanel } from './CashbackPanel';
 import { TopBar } from './Layout';
 
-const TABS = [['ACTIVE', 'Đang hiệu lực'], ['USED', 'Đã dùng'], ['EXPIRED', 'Hết hạn'], ['REFUNDED', 'Đã hoàn'], ['CASHBACK_CONFIRMATION', 'Chờ xác nhận Cashback']];
+const TABS = [['ACTIVE', 'Đang hiệu lực'], ['USED', 'Đã dùng'], ['EXPIRED', 'Hết hạn'], ['REFUNDED', 'Đã hoàn'], ['PENDING_CASHBACK', 'Cashback đang xử lý'], ['CASHBACK_CONFIRMATION', 'Chờ xác nhận Cashback'], ['DISPUTED', 'Cashback tranh chấp'], ['COMPLETED', 'Cashback hoàn tất']];
+const matchesTab = (v, tab) => tab === 'CASHBACK_CONFIRMATION' ? v.status === 'MERCHANT_REPORTED_PAID' : ['PENDING_CASHBACK', 'DISPUTED', 'COMPLETED'].includes(tab) ? v.status === tab : v.tab === tab;
 
 // Vi xem duoc khi mat mang: luu ban sao danh sach gan nhat tren may
 function useWallet(userId) {
@@ -37,31 +40,35 @@ export function Wallet() {
   const session = useSession(customerApi);
   const [tab, setTab] = useState('ACTIVE');
   const { data, error, loading, reload, offline } = useWallet(session?.user?.id);
-  const list = (data || []).filter((v) => tab === 'CASHBACK_CONFIRMATION' ? v.status === 'MERCHANT_REPORTED_PAID' : v.tab === tab);
+  const list = (data || []).filter(v => matchesTab(v, tab));
 
   return (
     <div>
       <TopBar title="Ví voucher" back={false} right={<button type="button" className="link" onClick={() => reload()}>⟳</button>} />
       <div className="screen" style={{ paddingTop: 0 }}>
+        <div className="wallet-intro"><div><div className="brand-eyebrow">VÍ CỦA BẠN</div><h2>Mọi ưu đãi, trong tầm tay.</h2><p>Theo dõi voucher, thời hạn và tiến trình Cashback ở một nơi.</p></div><span className="brand-icon"><Icon name="ticket" size={26} /></span></div>
         <div className="chips mb">
           {TABS.map(([k, l]) => (
-            <button type="button" key={k} className={`chip ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{tab === k && '✓ '}{l}</button>
+            <button type="button" key={k} className={`chip ${tab === k ? 'active' : ''}`} aria-pressed={tab === k} onClick={() => setTab(k)}>{l}{data ? ` (${data.filter(v => matchesTab(v, k)).length})` : ''}</button>
           ))}
         </div>
         {offline && <div className="alert alert-warn small">Đang mất mạng: hiển thị ví đã lưu trên máy, chưa tạo được mã sử dụng.</div>}
         <ErrorBox error={error} onRetry={reload} />
-        {loading && !data ? <Spinner /> : list.length === 0 ? <Empty icon="🎟️">Chưa có voucher ở mục này.</Empty> : list.map((v) => (
-          <div key={v.id} className="card" onClick={() => navigate(`/wallet/${v.id}`)} role="button">
+        {loading && !data ? <Spinner /> : !error && list.length === 0 ? <Empty icon="◇">Chưa có voucher ở mục này. Khám phá ưu đãi để thêm trải nghiệm mới.</Empty> : <div className="wallet-grid">{list.map((v) => (
+          <article key={v.id} className="card wallet-ticket">
             <div className="row between gap">
-              <div className="bold grow">{v.campaign?.title}</div>
+              <span className="brand-icon"><Icon name="ticket" /></span>
               <Badge tone={VOUCHER_STATUS_TONE[v.displayStatus]}>{v.statusLabel}</Badge>
             </div>
-            <div className="small muted">{v.campaign?.brand?.name} · Mã tra cứu: <span className="mono">{v.code}</span></div>
+            <div className="small muted">{v.campaign?.brand?.name}</div><Link className="wallet-ticket-title" to={`/wallet/${v.id}`}>{v.campaign?.title}</Link>
+            {v.campaign && <VoucherBenefit voucher={v.campaign} />}
+            <div className="wallet-code">Mã tra cứu: <span className="mono">{v.code}</span></div>
             <div className="small muted">Hạn sử dụng: {dateTime(v.expireAt)}</div>
             {v.displayStatus === 'REFUND_PENDING' && <div className="small" style={{ color: 'var(--warn)' }}>Đang chờ hoàn tiền, tạm thời không sử dụng được.</div>}
             {v.cashback?.reminderDue && <div className="alert alert-warn small">Quá 72 giờ: cần kiểm tra và xác nhận Cashback.</div>}
             {v.cashback?.status === 'MERCHANT_REPORTED_PAID' && <div className="small">Merchant đã báo hoàn {money(v.cashback.cashbackAmount)}. Mở chi tiết để xác nhận hoặc báo chưa nhận.</div>}
             {v.usedAt && <div className="small muted">Đã dùng lúc: {dateTime(v.usedAt)}</div>}
+            <Link to={`/wallet/${v.id}`} className="text-action">Xem chi tiết <Icon name="arrow" size={16} /></Link>
             {v.canRedeem && !offline && (
               <button type="button" className="btn btn-block mt" onClick={(e) => { e.stopPropagation(); navigate(`/wallet/${v.id}/use`); }}>
                 ▦ Sử dụng ngay
@@ -70,8 +77,8 @@ export function Wallet() {
             {v.tab === 'USED' && v.review.canReview && (
               <div className="row end mt"><button type="button" className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); navigate(`/wallet/${v.id}/review`); }}>☆ Đánh giá</button></div>
             )}
-          </div>
-        ))}
+          </article>
+        ))}</div>}
       </div>
     </div>
   );
@@ -96,6 +103,8 @@ export function VoucherDetail() {
           <div className="small muted">Ngày mua: {dateTime(v.issuedAt)}</div>
           <div className="small muted">Hạn sử dụng: {dateTime(v.expireAt)}</div>
           <div className="small muted mt">Mã tra cứu chỉ để đối chiếu, không dùng để sử dụng voucher.</div>
+          <div className="small mt"><b>Điều kiện sử dụng</b><p style={{ whiteSpace: 'pre-wrap' }}>{v.campaign.terms || 'Xem điều kiện tại chi nhánh áp dụng.'}</p></div>
+          <ol className="voucher-timeline"><li>Đã mua · {dateTime(v.issuedAt)}</li>{v.redemption && <li>Đã xác minh sử dụng · {dateTime(v.redemption.redeemedAt)}</li>}{v.cashback?.completedAt && <li>Cashback được xác nhận · {dateTime(v.cashback.completedAt)}</li>}</ol>
         </div>
         {v.canRedeem && <button type="button" className="btn btn-block mt" onClick={() => navigate(`/wallet/${id}/use`)}>Sử dụng ngay</button>}
         {v.displayStatus === 'REFUND_PENDING' && <div className="alert alert-warn mt">Voucher đang chờ hoàn tiền nên tạm khóa, không sử dụng được tại cửa hàng.</div>}
@@ -270,10 +279,10 @@ export function ReviewPage() {
       <div className="screen">
         <div className="bold mb">{v.data?.campaign?.title}</div>
         <div className="stars">
-          {[1, 2, 3, 4, 5].map((s) => <button type="button" key={s} className={s <= rating ? 'on' : ''} onClick={() => setRating(s)}>★</button>)}
+          {[1, 2, 3, 4, 5].map((s) => <button type="button" key={s} aria-label={`${s} sao`} aria-pressed={s === rating} className={s <= rating ? 'on' : ''} onClick={() => setRating(s)}>★</button>)}
         </div>
         <div className="center small muted mb">{rating} / 5 sao</div>
-        <textarea className="input" rows={5} maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Chia sẻ trải nghiệm của bạn" />
+        <textarea className="input" aria-label="Nội dung đánh giá" rows={5} maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Chia sẻ trải nghiệm của bạn" />
         <div className="small muted" style={{ textAlign: 'right' }}>{comment.length}/1000</div>
         <button type="button" className="btn btn-block mt" disabled={busy} onClick={submit}>Gửi đánh giá</button>
       </div>

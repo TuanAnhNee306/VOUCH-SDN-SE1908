@@ -15,8 +15,8 @@ export function CashbackPanel({ voucher, reload }) {
     const result = await run(() => customerApi.post('/cashback/' + voucher.id + '/' + action, body), action === 'confirm' ? 'Đã ghi nhận bạn nhận đủ tiền.' : 'Đã mở tranh chấp để Admin xem xét.');
     if (result) { setReceived(false); reload(); }
   };
-  return <div className="card mt">
-    <h3>{LABELS[c.status]}</h3><div className="price">{money(c.cashbackAmount)}</div>
+  return <div className="card mt cashback-panel">
+    <div className="brand-eyebrow">THEO DÕI CASHBACK</div><h3>{LABELS[c.status]}</h3><div className="cashback-amount">{money(c.cashbackAmount)}</div>
     {c.paymentReport && <div className="small">{c.paymentReport.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản ngân hàng'} · Thực hiện lúc {dateTime(c.paymentReport.paidAt)}<br />Merchant báo lúc {dateTime(c.paymentReport.merchantReportedAt)}<br />Tham chiếu: {c.paymentReport.paymentReference}<br />Mã biên nhận điện tử: {c.paymentReport.receiptId}</div>}
     {c.reminderDue && <div className="alert alert-warn mt">Đã qua 72 giờ. Vui lòng kiểm tra tiền thực nhận rồi xác nhận hoặc báo chưa nhận. Hệ thống không tự hoàn tất.</div>}
     {c.status === 'MERCHANT_REPORTED_PAID' && <>

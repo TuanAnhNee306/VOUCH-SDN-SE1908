@@ -22,7 +22,7 @@ export function StoreSelect() {
       <h1>Chọn chi nhánh làm việc</h1>
       <ErrorBox error={stores.error} />
       {stores.loading && !stores.data ? <Spinner /> : stores.data?.length === 0 ? <Empty>Bạn chưa được gán vào chi nhánh nào đang hoạt động.</Empty> : stores.data?.map((s) => (
-        <div key={s.id} className="card row gap" role="button" onClick={() => !busy && pick(s)} style={{ cursor: 'pointer', border: session?.activeStoreId === s.id ? '2px solid var(--primary)' : '' }}>
+        <div key={s.id} className="card row gap" role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} onKeyDown={e => { if (!busy && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(s); } }} onClick={() => !busy && pick(s)} style={{ cursor: 'pointer', border: session?.activeStoreId === s.id ? '2px solid var(--primary)' : '' }}>
           <span>🏬</span>
           <div className="grow"><div className="bold">{s.name}</div><div className="small muted">{s.address}</div></div>
           <span>›</span>
@@ -145,18 +145,18 @@ export function StoreRedeem() {
   };
 
   return (
-    <div style={{ maxWidth: 560, margin: '0 auto' }}>
-      <h1>Xác nhận sử dụng voucher</h1>
+    <div className="redemption-workspace" style={{ maxWidth: 680, margin: '0 auto' }}>
+      <div className="page-head"><div><div className="eyebrow">XÁC MINH TẠI QUẦY</div><h1>Xác nhận sử dụng voucher</h1><p className="muted">{session?.activeStore?.name} · Nhập hóa đơn và mã khách hàng cung cấp.</p></div></div>
       <ResultBanner result={result} onNext={next} />
+      <section className="card">
       <div className="tabs">
         <button type="button" className={`tab ${tab === 'qr' ? 'active' : ''}`} onClick={() => setTab('qr')}>▦ Quét QR</button>
         <button type="button" className={`tab ${tab === 'otp' ? 'active' : ''}`} onClick={() => setTab('otp')}>⌨ Nhập OTP</button>
       </div>
+      <div className="grid2"><label className="field"><span>Mã hóa đơn Cashback</span><input value={billReference} onChange={(e) => setBillReference(e.target.value)} placeholder="Mã hóa đơn duy nhất tại thương hiệu" /></label>
       <label className={`field ${pending ? 'field-error' : ''}`}><span>Giá trị hóa đơn (VND)</span>
-        <input aria-label="Mã hóa đơn Cashback" value={billReference} onChange={(e) => setBillReference(e.target.value)} placeholder="Mã hóa đơn duy nhất cho Cashback" />
         <input type="number" min="0" value={bill} onChange={(e) => setBill(e.target.value)} placeholder="Bắt buộc với voucher mệnh giá" />
-        <span className="small muted" style={{ fontWeight: 400 }}>Bắt buộc với voucher mệnh giá, không bắt buộc với loại khác (FR-REDEEM-08).</span>
-      </label>
+      </label></div><p className="small muted mb">Voucher Cashback cần mã và giá trị hóa đơn. Voucher mệnh giá cần hóa đơn ít nhất bằng mệnh giá. Kết quả được máy chủ xác minh khi gửi mã.</p>
       {pending && (
         <div className="alert alert-warn">
           <b>Mã của khách vẫn còn hiệu lực.</b> Nhập giá trị hóa đơn rồi gửi lại, không cần khách quét lại mã.
@@ -170,17 +170,18 @@ export function StoreRedeem() {
         <div>
           <QrScanner onResult={(text) => send({ qrPayload: text })} />
           <form className="row gap mt" onSubmit={(e) => { e.preventDefault(); if (qrText.trim()) send({ qrPayload: qrText.trim() }); }}>
-            <input className="input grow mono" value={qrText} onChange={(e) => setQrText(e.target.value)} placeholder="Hoặc dán nội dung mã QR (v1....)" />
+            <input className="input grow mono" aria-label="Nội dung mã QR" value={qrText} onChange={(e) => setQrText(e.target.value)} placeholder="Hoặc dán nội dung mã QR (v1....)" />
             <button className="btn" disabled={busy || !qrText.trim()}>Xác nhận</button>
           </form>
         </div>
       ) : (
         <form onSubmit={(e) => { e.preventDefault(); if (otp.length === 6) send({ otpCode: otp }); }}>
-          <input className="input otp-input" inputMode="numeric" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} placeholder="••••••" />
+          <input className="input otp-input" aria-label="Mã OTP 6 số" inputMode="numeric" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} placeholder="••••••" />
           <button className="btn btn-block mt" disabled={busy || otp.length !== 6}>Xác nhận sử dụng</button>
           <p className="small muted center mt">Mã OTP 6 số hiển thị dưới mã QR trên ứng dụng của khách, hiệu lực 60 giây.</p>
         </form>
       )}
+      </section>
     </div>
   );
 }

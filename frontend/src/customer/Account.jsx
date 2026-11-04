@@ -4,6 +4,8 @@ import { customerApi, useSession } from '../api/client';
 import { Badge, CampaignImage, Empty, ErrorBox, Logo, Spinner, StatusBadge, useAction, useLoad, useToast } from '../components/ui';
 import { dateTime, money, ORDER_STATUS } from '../utils/format';
 import { useUnread, TopBar } from './Layout';
+import { AuthLayout } from '../components/AuthLayout';
+import { Icon } from '../components/Icon';
 
 function askNotificationPermission() {
   if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
@@ -20,6 +22,7 @@ export function Login() {
   const [otp, setOtp] = useState('');
   const [devOtp, setDevOtp] = useState(null);
   const [cooldown, setCooldown] = useState(0);
+  const [error, setError] = useState(null);
   const [busy, run] = useAction();
 
   useEffect(() => {
@@ -30,7 +33,9 @@ export function Login() {
 
   const send = async (e) => {
     e?.preventDefault();
-    const r = await run(() => customerApi.post('/auth/otp/request', { email }), 'Đã gửi mã OTP.');
+    if (busy) return;
+    setError(null);
+    const r = await run(() => customerApi.post('/auth/otp/request', { email }).catch(e => { setError(e); throw e; }), 'Đã gửi mã OTP.');
     if (r) {
       setDevOtp(r.devOtp || null);
       setStep('otp');
@@ -39,7 +44,9 @@ export function Login() {
   };
   const verify = async (e) => {
     e.preventDefault();
-    const r = await run(() => customerApi.post('/auth/otp/verify', { email, otp }));
+    if (busy) return;
+    setError(null);
+    const r = await run(() => customerApi.post('/auth/otp/verify', { email, otp }).catch(e => { setError(e); throw e; }));
     if (r) {
       customerApi.setSession(r);
       askNotificationPermission();
@@ -49,38 +56,40 @@ export function Login() {
 
   if (step === 'otp') {
     return (
-      <div>
-        <TopBar title="Nhập mã OTP" onBack={() => setStep('email')} />
-        <form className="screen center" onSubmit={verify}>
-          <p className="small muted">Mã xác thực đã được gửi tới {email}</p>
-          <input className="input otp-input mt" inputMode="numeric" maxLength={6} autoFocus value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} />
+      <AuthLayout>
+        <div className="brand-icon"><Icon name="mail" /></div><div className="brand-eyebrow mt">XÁC THỰC EMAIL</div><h2>Kiểm tra hộp thư của bạn</h2>
+        <p className="auth-description">Nhập mã gồm 6 chữ số đã gửi đến <b>{email}</b>.</p>
+        <form onSubmit={verify}>
+          <label className="field"><span>Mã xác thực OTP</span><input className="otp-input" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} required /></label>
+          <ErrorBox error={error} />
           {devOtp && (
             <div className="demo-box small mt">Chế độ demo (MAIL_MODE=console): mã OTP là <b className="mono">{devOtp}</b>{' '}
               <button type="button" className="link" onClick={() => setOtp(devOtp)}>Điền</button>
             </div>
           )}
-          <button className="btn btn-block mt" disabled={busy || otp.length !== 6}>Xác nhận</button>
+          <button className="btn btn-block mt" disabled={busy || otp.length !== 6}>{busy ? 'Đang xác thực…' : 'Xác nhận & tiếp tục'} <Icon name="arrow" /></button>
           <button type="button" className="link mt" disabled={cooldown > 0 || busy} onClick={send}>
             {cooldown > 0 ? `Gửi lại mã sau ${cooldown}s` : 'Gửi lại mã'}
           </button>
+          <div className="mt"><button type="button" className="link small" disabled={busy} onClick={() => { setStep('email'); setError(null); }}>← Đổi địa chỉ email</button></div>
+          <p className="auth-help">Mã có hiệu lực 5 phút. Kiểm tra thư mục spam nếu chưa thấy email.</p>
         </form>
-      </div>
+      </AuthLayout>
     );
   }
   return (
-    <div>
-      <TopBar title="" />
-      <form className="screen center" onSubmit={send}>
-        <div style={{ fontSize: 40 }}>🏷️</div>
-        <h2>Voucher Platform</h2>
-        <p className="small muted mb">Ưu đãi đa thương hiệu, dùng ngay tại cửa hàng</p>
-        <label className="field" style={{ textAlign: 'left' }}><span>Email</span>
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+    <AuthLayout>
+      <div className="brand-eyebrow">CHÀO MỪNG ĐẾN VỚI VOUCH.</div><h2>Ưu đãi bắt đầu từ đây.</h2>
+      <p className="auth-description">Đăng nhập hoặc bắt đầu với email của bạn. Nhận mã xác thực để khám phá và quản lý voucher.</p>
+      <form onSubmit={send}>
+        <label className="field"><span>Địa chỉ email</span>
+          <input type="email" autoComplete="email" placeholder="ban@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
-        <button className="btn btn-block" disabled={busy}>Gửi mã OTP</button>
-        <p className="small muted mt">Mã OTP 6 số có hiệu lực 5 phút. Mỗi email tối đa 5 lần / giờ.</p>
+        <ErrorBox error={error} />
+        <button className="btn btn-block" disabled={busy}>{busy ? 'Đang gửi mã…' : 'Tiếp tục bằng email'} <Icon name="arrow" /></button>
+        <p className="auth-help">Không cần ghi nhớ mật khẩu. Mã OTP 6 số có hiệu lực 5 phút. Mỗi email tối đa 5 lần / giờ.</p>
       </form>
-    </div>
+    </AuthLayout>
   );
 }
 
@@ -120,13 +129,13 @@ export function Profile() {
     Object.keys(localStorage).filter((k) => k.startsWith('vp_wallet_')).forEach((k) => localStorage.removeItem(k));
     toast('Đã đăng xuất.');
   };
-  const items = [['❤️', 'Yêu thích', '/favorites'], ['🔔', 'Thông báo', '/notifications'], ['⟲', 'Yêu cầu hoàn tiền', '/refunds']];
+  const items = [['heart', 'Yêu thích', '/favorites'], ['bell', 'Thông báo', '/notifications'], ['cash', 'Yêu cầu hoàn tiền', '/refunds'], ['filter', 'Cài đặt thông báo', '/notifications/settings']];
   return (
     <div>
       <TopBar title="Cá nhân" back={false} />
-      <div className="screen" style={{ paddingTop: 0 }}>
+      <div className="screen" style={{ paddingTop: 0 }}><div className="profile-grid">
         <div className="card center">
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--primary-soft)', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>👤</div>
+          <div className="profile-avatar">{(u.fullName || u.email).slice(0, 1).toUpperCase()}</div><div className="brand-eyebrow">TÀI KHOẢN CỦA BẠN</div>
           <div className="bold mt">{u.fullName || 'Khách hàng'}</div>
           <div className="small muted">{u.email}{u.phone ? ` · ${u.phone}` : ''}</div>
           {!editing && <button type="button" className="link small mt" onClick={() => { setForm({ fullName: u.fullName || '', phone: u.phone || '' }); setEditing(true); }}>Sửa hồ sơ</button>}
@@ -138,18 +147,16 @@ export function Profile() {
             </form>
           )}
         </div>
-        <div className="card mt" style={{ padding: 0 }}>
+        <div><div className="card" style={{ padding: 0 }}>
           {items.map(([ico, label, to]) => (
-            <div key={to} className="row gap" style={{ padding: 14, borderBottom: '1px solid var(--line)', cursor: 'pointer' }} onClick={() => navigate(to)}>
-              <span>{ico}</span><span className="grow">{label}</span><span>›</span>
-            </div>
+            <button type="button" key={to} className="profile-menu-link" onClick={() => navigate(to)}><Icon name={ico} /><span className="grow">{label}</span><span>›</span></button>
           ))}
         </div>
         {'Notification' in window && Notification.permission !== 'granted' && (
           <button type="button" className="btn btn-ghost btn-block mt" onClick={askNotificationPermission}>Cho phép thông báo trên thiết bị</button>
         )}
         <button type="button" className="btn btn-ghost btn-block mt" style={{ color: 'var(--bad)' }} onClick={logout}>⎋ Đăng xuất</button>
-      </div>
+        </div></div></div>
     </div>
   );
 }
@@ -165,21 +172,24 @@ export function Orders() {
   return (
     <div>
       <TopBar title="Đơn hàng" back={false} right={<button type="button" className="link" onClick={() => list.reload()}>⟳</button>} />
-      <div className="screen" style={{ paddingTop: 0 }}>
+      <div className="screen order-list" style={{ paddingTop: 0 }}>
+        <p className="small muted mb">Theo dõi đơn đã mua, tình trạng phát hành voucher và các đơn đang chờ thanh toán.</p>
         <ErrorBox error={list.error} onRetry={list.reload} />
         {list.loading && !list.data ? <Spinner /> : list.data?.length === 0 ? <Empty icon="🧾">Chưa có đơn hàng nào.</Empty> : list.data?.map((o) => {
           const canPay = o.status === 'PENDING' && new Date(o.reservedUntil) > new Date();
           return (
-            <div key={o.id} className="card row gap" onClick={() => navigate(`/orders/${o.id}/result`)} role="button">
+            <div key={o.id} className="card order-card">
               <div className="grow">
-                <div className="bold">{o.campaign?.title}</div>
-                <div className="small muted">{money(o.totalAmount)} · SL {o.quantity} · {dateTime(o.createdAt)}</div>
+                <div className="brand-eyebrow">ĐƠN VOUCHER</div><div className="bold">{o.campaign?.title}</div>
+                <div className="order-reference">Mã đơn: {o.id}</div>
+                <div className="small muted">SL {o.quantity} · {dateTime(o.createdAt)}</div>
                 {o.status === 'PENDING' && <div className="small muted">Giữ chỗ đến: {dateTime(o.reservedUntil)}</div>}
-                <div className="mt"><StatusBadge map={ORDER_STATUS} value={o.status} /></div>
               </div>
+              <div><div className="price">{money(o.totalAmount)}</div><div className="mt"><StatusBadge map={ORDER_STATUS} value={o.status} /></div></div>
+              <div><button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate(`/orders/${o.id}/result`)}>Xem chi tiết →</button>
               {canPay ? (
                 <button type="button" className="btn btn-sm" disabled={busy} onClick={(e) => { e.stopPropagation(); pay(o); }}>Tiếp tục thanh toán</button>
-              ) : null}
+              ) : null}</div>
             </div>
           );
         })}
@@ -221,7 +231,7 @@ export function Notifications() {
       <div className="screen" style={{ paddingTop: 0 }}>
         <ErrorBox error={list.error} />
         {list.loading && !list.data ? <Spinner /> : list.data?.items.length === 0 ? <Empty icon="🔔">Chưa có thông báo.</Empty> : list.data?.items.map((n) => (
-          <div key={n.id} className={`notice ${n.readAt ? '' : 'unread'}`} onClick={() => open(n)} role="button">
+          <div key={n.id} className={`notice ${n.readAt ? '' : 'unread'}`} onClick={() => open(n)} role="button" tabIndex={0} onKeyDown={e => { if (e.target === e.currentTarget && ['Enter', ' '].includes(e.key)) { e.preventDefault(); open(n); } }}>
             <span>{n.type === 'VOUCHER_USED' ? '▦' : n.type === 'REFUND_RESULT' ? '⟲' : n.type === 'CAMPAIGN_NEW' ? '📣' : '🎟️'}</span>
             <div className="grow">
               <div className="bold">{n.title}</div>
@@ -252,7 +262,7 @@ export function NotificationSettings() {
         {settings.loading && !settings.data ? <Spinner /> : settings.data?.map((s) => (
           <div key={s.type} className="row between" style={{ padding: '10px 0' }}>
             <span>{s.label}</span>
-            <label className="switch"><input type="checkbox" checked={s.enabled} onChange={() => toggle(s)} /><span /></label>
+            <label className="switch"><input type="checkbox" aria-label={s.label} checked={s.enabled} onChange={() => toggle(s)} /><span /></label>
           </div>
         ))}
       </div>
@@ -268,7 +278,7 @@ export function Favorites() {
       <TopBar title="Yêu thích" />
       <div className="screen" style={{ paddingTop: 0 }}>
         {list.loading && !list.data ? <Spinner /> : list.data?.length === 0 ? <Empty icon="❤️">Chưa có mục yêu thích. Bấm ♡ ở voucher hoặc theo dõi thương hiệu.</Empty> : list.data?.map((f) => (
-          <div key={f.id} className="card row gap" role="button" onClick={() => navigate(f.targetType === 'BRAND' ? `/brands/${f.targetId}` : `/campaigns/${f.targetId}`)}>
+          <div key={f.id} className="card row gap" role="button" tabIndex={0} onKeyDown={e => { if (e.target === e.currentTarget && ['Enter', ' '].includes(e.key)) { e.preventDefault(); navigate(f.targetType === 'BRAND' ? `/brands/${f.targetId}` : `/campaigns/${f.targetId}`); } }} onClick={() => navigate(f.targetType === 'BRAND' ? `/brands/${f.targetId}` : `/campaigns/${f.targetId}`)}>
             <CampaignImage src={f.image} className="fav-img" />
             <div className="grow">
               <div className="bold">{f.title}</div>

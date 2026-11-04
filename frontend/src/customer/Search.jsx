@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Icon } from '../components/Icon';
+import { CatalogSkeleton, Pagination } from './MarketplaceUI';
+import { loadAllCampaigns, loadCatalogPage } from '../utils/catalog';
 import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from 'react-leaflet';
 import { customerApi } from '../api/client';
 import { Empty, ErrorBox, Spinner, useLoad, useToast } from '../components/ui';
@@ -10,7 +13,8 @@ const SORTS = [
   ['newest', 'Mới nhất'], ['price_asc', 'Giá tăng dần'], ['price_desc', 'Giá giảm dần'],
   ['discount_desc', 'Giảm nhiều nhất'], ['best_seller', 'Bán chạy'],
 ];
-const EMPTY_FILTER = { categoryId: '', sort: 'newest', minPrice: '', maxPrice: '', minDiscount: '', maxDiscount: '' };
+const EMPTY_FILTER = { categoryId: '', brandId: '', sort: 'newest', minPrice: '', maxPrice: '', minDiscount: '', maxDiscount: '' };
+
 
 function getPosition() {
   return new Promise((resolve, reject) => {
@@ -28,8 +32,13 @@ function getPosition() {
 export function Search() {
   const navigate = useNavigate();
   const toast = useToast();
-  const [keyword, setKeyword] = useState('');
-  const [query, setQuery] = useState('');
+  const [searchParams] = useSearchParams();
+  const urlKeyword = searchParams.get('keyword') || '';
+  const [keyword, setKeyword] = useState(urlKeyword);
+  const [query, setQuery] = useState(urlKeyword);
+  const [type, setType] = useState('');
+  const [page, setPage] = useState(1);
+  const dialogRef = useRef(null);
   const [filter, setFilter] = useState(EMPTY_FILTER);
   const [draft, setDraft] = useState(EMPTY_FILTER);
   const [sheet, setSheet] = useState(false);
@@ -37,6 +46,12 @@ export function Search() {
   const [pos, setPos] = useState(null);
   const [locMsg, setLocMsg] = useState('');
   const categories = useLoad(() => customerApi.get('/categories'), []);
+  const brands = useLoad(async () => [...new Map((await loadAllCampaigns(customerApi)).filter(c => c.brand).map(c => [c.brand.id, c.brand])).values()], []);
+  useEffect(() => { setKeyword(urlKeyword); setQuery(urlKeyword); setPage(1); }, [urlKeyword]);
+  useEffect(() => {
+    if (sheet) dialogRef.current?.showModal();
+    else dialogRef.current?.close();
+  }, [sheet]);
 
   const params = new URLSearchParams();
   if (query) params.set('keyword', query);
@@ -48,9 +63,10 @@ export function Search() {
     if (filter.sort === 'newest') params.set('sort', 'distance_asc');
   }
   const qs = params.toString();
-  const list = useLoad(() => customerApi.get(`/campaigns?${qs}`), [qs]);
+  const list = useLoad(() => loadCatalogPage(customerApi, qs, { type, page }), [qs, type, page]);
 
   const pickRadius = async (r) => {
+    setPage(1);
     if (radius === r) return setRadius(null);
     try {
       const p = pos || (await getPosition());
@@ -70,13 +86,15 @@ export function Search() {
     <div>
       <TopBar title="Tìm kiếm voucher" back={false} right={<button type="button" className="bell" onClick={() => navigate('/map')} aria-label="Bản đồ">🗺️</button>} />
       <div className="screen" style={{ paddingTop: 0 }}>
-        <form className="row gap" onSubmit={(e) => { e.preventDefault(); setQuery(keyword.trim()); }}>
+        <p className="muted mb small">Tìm quyền lợi phù hợp với nhu cầu, giá mua và thương hiệu của bạn.</p>
+        <form className="row gap" onSubmit={(e) => { e.preventDefault(); setQuery(keyword.trim()); setPage(1); }}>
           <div className="searchbox grow">
-            <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Tên voucher hoặc thương hiệu" />
-            <button type="submit" className="link">🔍</button>
+            <Icon name="search" /><input aria-label="Tên voucher hoặc thương hiệu" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Tên voucher hoặc thương hiệu" />
+            <button type="submit" className="link" aria-label="Tìm kiếm voucher"><Icon name="arrow" /></button>
           </div>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setDraft(filter); setSheet(true); }}>⚙️ Lọc</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setDraft(filter); setSheet(true); }}><Icon name="filter" />Lọc</button>
         </form>
+        <div className="category-chips mt">{[['', 'Tất cả voucher'], ['CASHBACK', 'Cashback'], ['STORED_VALUE', 'Voucher mệnh giá']].map(([v,l]) => <button type="button" className={`category-chip ${type === v ? 'active' : ''}`} aria-pressed={type === v} key={v} onClick={() => { setType(v); setPage(1); }}>{l}</button>)}</div>
         <div className="chips mt">
           {[1, 3, 5].map((r) => (
             <button type="button" key={r} className={`chip ${radius === r ? 'active' : ''}`} onClick={() => pickRadius(r)}>
@@ -87,19 +105,18 @@ export function Search() {
         {locMsg && <div className="alert alert-warn small">{locMsg}</div>}
         <div className="small muted mt">{list.data ? `${list.data.total} kết quả` : ''}</div>
         <ErrorBox error={list.error} onRetry={list.reload} />
-        {list.loading && !list.data ? <Spinner /> : list.data?.items.length === 0 ? (
+        {list.loading ? <CatalogSkeleton /> : list.error ? null : list.data?.items.length === 0 ? (
           <Empty icon="🔎">Không tìm thấy voucher phù hợp.</Empty>
         ) : (
-          <div className="vlist mt">
+          <div className="vgrid mt">
             {list.data?.items.map((c) => <VoucherCard key={c.id} c={c} onClick={() => navigate(`/campaigns/${c.id}`)} />)}
           </div>
         )}
+        <Pagination page={page} total={list.data?.total || 0} pageSize={12} onChange={setPage} busy={list.loading} />
       </div>
 
-      {sheet && (
-        <div className="sheet-backdrop" onClick={() => setSheet(false)}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <h3>Lọc và sắp xếp</h3>
+      <dialog ref={dialogRef} className="catalog-filter-dialog" aria-labelledby="filter-dialog-title" onCancel={() => setSheet(false)} onClick={e => { if (e.target === dialogRef.current) { const box = dialogRef.current.getBoundingClientRect(); if (e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom) setSheet(false); } }}>
+            <div className="filter-dialog-head"><h3 id="filter-dialog-title">Lọc và sắp xếp</h3><button type="button" aria-label="Đóng bộ lọc" onClick={() => setSheet(false)}>×</button></div>
             <label className="field"><span>Danh mục</span>
               <select value={draft.categoryId} onChange={setF('categoryId')}>
                 <option value="">Tất cả</option>
@@ -109,17 +126,17 @@ export function Search() {
             <label className="field"><span>Sắp xếp</span>
               <select value={draft.sort} onChange={setF('sort')}>{SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
             </label>
+            <ErrorBox error={brands.error || categories.error} />
+            <label className="field"><span>Thương hiệu</span><select value={draft.brandId} onChange={setF('brandId')}><option value="">Tất cả thương hiệu</option>{brands.data?.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
             <div className="grid2">
               <label className="field"><span>Giá từ (VND)</span><input type="number" min="0" value={draft.minPrice} onChange={setF('minPrice')} /></label>
               <label className="field"><span>Giá đến (VND)</span><input type="number" min="0" value={draft.maxPrice} onChange={setF('maxPrice')} /></label>
               <label className="field"><span>Giảm tối thiểu (%)</span><input type="number" min="0" max="100" value={draft.minDiscount} onChange={setF('minDiscount')} /></label>
               <label className="field"><span>Giảm tối đa (%)</span><input type="number" min="0" max="100" value={draft.maxDiscount} onChange={setF('maxDiscount')} /></label>
             </div>
-            <button type="button" className="btn btn-block" onClick={() => { setFilter(draft); setSheet(false); }}>Áp dụng</button>
-            <button type="button" className="link btn-block mt" onClick={() => { setFilter(EMPTY_FILTER); setDraft(EMPTY_FILTER); setSheet(false); }}>Xóa bộ lọc</button>
-          </div>
-        </div>
-      )}
+            <button type="button" className="btn btn-block" onClick={() => { setFilter(draft); setPage(1); setSheet(false); }}>Áp dụng</button>
+            <button type="button" className="link btn-block mt" onClick={() => { setFilter(EMPTY_FILTER); setDraft(EMPTY_FILTER); setPage(1); setSheet(false); }}>Xóa bộ lọc</button>
+      </dialog>
     </div>
   );
 }

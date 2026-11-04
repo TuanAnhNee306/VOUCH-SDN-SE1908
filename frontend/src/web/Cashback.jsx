@@ -1,7 +1,7 @@
 import { useContext, useState } from 'react';
 import { webApi, useSession } from '../api/client';
 import { BrandContext } from './Brand';
-import { ErrorBox, Spinner, Empty, useAction, useLoad } from '../components/ui';
+import { Badge, ErrorBox, Spinner, Empty, useAction, useLoad } from '../components/ui';
 import { dateTime, money, toLocalInput } from '../utils/format';
 export const CASHBACK_LABELS = { PENDING_CASHBACK: 'Chờ Merchant hoàn tiền', MERCHANT_REPORTED_PAID: 'Merchant đã báo hoàn; chờ Customer xác nhận', DISPUTED: 'Đang tranh chấp', COMPLETED: 'Đã xác nhận hoàn tất' };
 function ReportForm({ item, endpoint, done }) {
@@ -68,21 +68,17 @@ export function CashbackManagement({ admin = false, brandMode = false }) {
   const endpoint = admin ? '/admin/cashback' : brandMode ? '/brand/' + brand?.id + '/cashback' : '/staff/cashback';
   const [filter, setFilter] = useState(admin ? 'DISPUTED' : '');
   const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState('');
   const list = useLoad(() => webApi.get(endpoint + (filter ? '?status=' + filter : '')), [endpoint, filter, session?.activeStoreId]);
   const item = list.data?.find(x => x.id === selected);
+  const filtered = list.data?.filter(x => `${x.campaignTitle} ${x.code} ${x.customer.name || ''} ${x.brand.name} ${x.redemption.invoiceCode || ''}`.toLocaleLowerCase('vi').includes(search.toLocaleLowerCase('vi')));
   const done = () => list.reload(true);
   return <div>
-    <div className="page-head"><h1>{admin ? 'Tranh chấp Cashback' : 'Hoàn Cashback trực tiếp'}</h1><button type="button" className="btn btn-ghost btn-sm" onClick={done}>⟳</button></div>
+    <div className="page-head"><div><div className="eyebrow">{admin ? 'GIÁM SÁT & XỬ LÝ' : 'NGHĨA VỤ HOÀN TIỀN'}</div><h1>{admin ? 'Tranh chấp Cashback' : 'Hoàn Cashback trực tiếp'}</h1><p className="muted">Theo dõi claim, biên nhận và từng bước xác minh.</p></div><button type="button" className="btn btn-ghost btn-sm" onClick={done}>⟳ Làm mới</button></div>
     <div className="alert alert-info small">Marketplace chỉ ghi nhận trạng thái và chứng từ. Merchant tự chi trả; ứng dụng không chuyển tiền. Danh sách hiển thị tối đa 200 claim gần nhất trong phạm vi quản lý.</div>
-    <label className="field"><span>Lọc trạng thái</span><select value={filter} onChange={e => { setFilter(e.target.value); setSelected(null); }}>{!admin && <option value="">Tất cả</option>}{Object.entries(CASHBACK_LABELS).map(([k,v]) => <option value={k} key={k}>{v}</option>)}</select></label>
+    <div className="filter-bar"><input className="input" aria-label="Tìm claim Cashback" placeholder="Tìm voucher, khách hàng, hóa đơn…" value={search} onChange={e => setSearch(e.target.value)} /><select className="input" aria-label="Lọc trạng thái Cashback" value={filter} onChange={e => { setFilter(e.target.value); setSelected(null); }}>{!admin && <option value="">Tất cả trạng thái</option>}{Object.entries(CASHBACK_LABELS).map(([k,v]) => <option value={k} key={k}>{v}</option>)}</select></div>
     <ErrorBox error={list.error} />
-    {list.loading && !list.data ? <Spinner /> : list.data?.length === 0 ? <Empty>Không có claim phù hợp.</Empty> : list.data?.map(x => <div key={x.id} className="card">
-      <div className="bold">{x.campaignTitle} · {money(x.claim.cashbackAmount)}</div>
-      <div className="small">{x.code} · {x.customer.name || x.customer.id} · {x.brand.name} / {x.storeName}</div>
-      <div className="small muted">Hóa đơn {x.redemption.invoiceCode} · {money(x.claim.billAmount)} · Claim lúc {dateTime(x.claim.requestedAt || x.redemption.usedAt)}</div>
-      <div>{CASHBACK_LABELS[x.status]}{x.reminderDue && ' · Đã quá 72 giờ chờ xác nhận'}</div>
-      <button type="button" className="btn btn-ghost btn-sm mt" onClick={() => setSelected(selected === x.id ? null : x.id)}>Chi tiết / xử lý</button>
-    </div>)}
+    {list.loading && !list.data ? <Spinner /> : filtered?.length === 0 ? <Empty>Không có claim phù hợp.</Empty> : <div className="card"><div className="table-scroll"><table className="table"><thead><tr><th>Voucher / khách hàng</th><th>Hóa đơn / chi nhánh</th><th>Cashback phải hoàn</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{filtered?.map(x => <tr key={x.id}><td><b>{x.campaignTitle}</b><div className="small muted">{x.code} · {x.customer.name || x.customer.id}</div></td><td>{x.redemption.invoiceCode || '—'} · {money(x.claim.billAmount)}<div className="small muted">{x.brand.name} / {x.storeName}</div><div className="small muted">{dateTime(x.claim.requestedAt || x.redemption.usedAt)}</div></td><td><b>{money(x.claim.cashbackAmount)}</b>{x.claim.paymentReport && <div className="small muted">{x.claim.paymentReport.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</div>}</td><td><Badge tone={x.status === 'DISPUTED' ? 'bad' : x.status === 'COMPLETED' ? 'ok' : 'warn'}>{CASHBACK_LABELS[x.status]}</Badge>{x.reminderDue && <div className="small muted">Quá 72 giờ chờ xác nhận</div>}</td><td><button type="button" className="btn btn-ghost btn-sm" aria-expanded={selected === x.id} onClick={() => setSelected(selected === x.id ? null : x.id)}>{selected === x.id ? 'Đóng chi tiết' : 'Chi tiết / xử lý'}</button></td></tr>)}</tbody></table></div></div>}
     {item && <div className="card mt">
       <h2>Claim {item.code}</h2><div className="small mono">ID: {item.id}</div>
       {item.claim.paymentReport && <div className="card"><h3>Biên nhận Merchant</h3><div>{item.claim.paymentReport.paymentMethod} · {money(item.claim.paymentReport.amount)} · {dateTime(item.claim.paymentReport.paidAt)}</div><div>Tham chiếu: {item.claim.paymentReport.paymentReference}</div><div>Mã biên nhận: {item.claim.paymentReport.evidence.id}</div><p style={{ whiteSpace: 'pre-wrap' }}>{item.claim.paymentReport.evidence.statement}</p><div className="small muted">Lời khai Merchant; không phải xác nhận ngân hàng. SHA256: {item.claim.paymentReport.evidence.sha256}</div></div>}

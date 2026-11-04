@@ -1,0 +1,35 @@
+/* Brand primitives shared by the established dashboard, storefront and auth. */
+:root {
+  --brand-primary: #4f46e5;
+  --brand-primary-dark: #3730a3;
+  --brand-primary-soft: #eef2ff;
+  --brand-background: #f6f7fb;
+  --brand-text: #1e293b;
+  --brand-muted: #64748b;
+  --brand-line: #e5e9f1;
+  --brand-radius: 14px;
+  --brand-font: Inter, 'Segoe UI', sans-serif;
+}
+.marketplace, .auth-page {
+  --primary: var(--brand-primary); --primary-dark: var(--brand-primary-dark); --primary-soft: var(--brand-primary-soft);
+  --bg: var(--brand-background); --text: var(--brand-text); --muted: #475569; --line: var(--brand-line); --radius: var(--brand-radius); --card: #fff;
+  font-family: var(--brand-font); color: var(--text); background: var(--bg); font-size: 15px; line-height: 1.65;
+}
+:is(.marketplace, .auth-page) .btn { min-height: 44px; border-radius: 8px; padding: 11px 18px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+:is(.marketplace, .auth-page) .btn-ghost { background: white; border: 1px solid var(--line); color: var(--text); }
+:is(.marketplace, .auth-page) .card { padding: 24px; border: 1px solid var(--line); box-shadow: 0 2px 4px #0f172a03; }
+:is(.marketplace, .auth-page) .field { margin-bottom: 20px; gap: 8px; min-width: 0; }
+:is(.marketplace, .auth-page) .field > span { font-size: 14px; font-weight: 600; color: #475569; }
+:is(.marketplace, .auth-page) :is(.input, .field input, .field select, .field textarea) { border-radius: 8px; min-height: 45px; border-color: #dce1ea; font-size: 15px; color: var(--text); }
+:is(.marketplace, .auth-page) .small { font-size: 13px; line-height: 1.7; }
+:is(.marketplace, .auth-page) :is(input, textarea)::placeholder { color: #64748b; opacity: 1; }
+:is(.marketplace, .auth-page) .brand-eyebrow { font-size: 11px; letter-spacing: 1.3px; }
+:is(.marketplace, .auth-page) :focus-visible { outline: 3px solid #a5b4fc; outline-offset: 3px; }
+:is(.marketplace, .auth-page) .logo { color: #25234c; font-size: 30px; letter-spacing: -1.5px; }
+:is(.marketplace, .auth-page) .logo span { color: var(--primary); }
+:is(.marketplace, .auth-page) .alert { line-height: 1.7; border-radius: 8px; overflow-wrap: anywhere; }
+:is(.marketplace, .auth-page) .empty { padding: 48px 24px; border: 1px dashed var(--line); border-radius: 12px; background: #fafbfe; }
+:is(.marketplace, .auth-page) .badge { font-size: 11px; padding: 4px 10px; }
+.brand-eyebrow { font-size: 10px; font-weight: 750; letter-spacing: 1.7px; color: var(--primary); text-transform: uppercase; }
+.brand-icon { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--primary-soft); color: var(--primary); flex-shrink: 0; }
+@media (prefers-reduced-motion: reduce) { :is(.marketplace, .auth-page) * { animation: none !important; transition: none !important; } }

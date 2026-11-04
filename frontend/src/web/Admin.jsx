@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { StatCard } from './Dashboard';
 import { webApi } from '../api/client';
 import { Badge, Empty, ErrorBox, PromptDialog, Spinner, StatusBadge, useAction, useLoad, useToast } from '../components/ui';
 import { BRAND_STATUS, CAMPAIGN_STATUS, date, dateTime, money, VOUCHER_TYPES } from '../utils/format';
@@ -7,20 +9,22 @@ import { valueText } from '../customer/Campaign';
 
 export function AdminDashboard() {
   const d = useLoad(() => webApi.get('/admin/dashboard'), []);
+  const pending = useLoad(() => webApi.get('/admin/campaigns/pending'), []);
   const r = d.data;
   const max = Math.max(1, ...(r?.transactionsByDay.map((x) => x.revenue) ?? [1]));
   return (
     <div>
-      <div className="page-head"><h1>Bảng điều khiển</h1><button type="button" className="btn btn-ghost btn-sm" onClick={() => d.reload()}>⟳</button></div>
+      <div className="page-head"><div><div className="eyebrow">MARKETPLACE OPERATIONS</div><h1>Tổng quan hệ thống</h1><p className="muted">Theo dõi kinh doanh và những công việc cần xử lý.</p></div><button type="button" className="btn btn-ghost btn-sm" onClick={() => { d.reload(); pending.reload(); }}>⟳ Làm mới dữ liệu</button></div>
       <ErrorBox error={d.error} />
       {!r ? <Spinner /> : (
         <>
           <div className="grid4">
-            <div className="stat"><div className="small muted">Doanh thu (trừ hoàn)</div><div className="v">{money(r.totalRevenue)}</div></div>
-            <div className="stat"><div className="small muted">Hoa hồng nền tảng</div><div className="v">{money(r.totalCommission)}</div></div>
-            <div className="stat"><div className="small muted">Giao dịch thành công</div><div className="v">{r.totalTransactions}</div></div>
-            <div className="stat"><div className="small muted">Thương hiệu hoạt động</div><div className="v">{r.totalActiveBrands}</div></div>
+            <StatCard label="Doanh thu bán voucher" value={money(r.totalRevenue)} hint="Đã trừ hoàn tiền" icon="cash" />
+            <StatCard label="Hoa hồng nền tảng" value={money(r.totalCommission)} hint="Theo tỷ lệ chốt của từng đơn" icon="chart" />
+            <StatCard label="Giao dịch thành công" value={r.totalTransactions} hint="Đơn đã phát hành voucher" icon="campaign" />
+            <StatCard label="Thương hiệu hoạt động" value={r.totalActiveBrands} hint="Hồ sơ đã được phê duyệt" icon="store" />
           </div>
+          <section className="card mt"><div className="section-header"><div><h2>Cần duyệt chiến dịch</h2><p className="small muted">Kiểm tra quyền lợi và điều kiện trước khi mở bán.</p></div><Link to="/web/admin/campaigns">Xem hàng đợi →</Link></div><ErrorBox error={pending.error} onRetry={pending.reload} />{pending.loading ? <Spinner /> : pending.data?.length === 0 ? <Empty icon="✓">Đã xử lý hết chiến dịch chờ duyệt.</Empty> : <div className="table-scroll"><table className="table"><thead><tr><th>Chiến dịch / thương hiệu</th><th>Quyền lợi</th><th>Giá bán</th><th>Ngày gửi</th><th>Xử lý</th></tr></thead><tbody>{pending.data?.slice(0, 5).map(c => <tr key={c.id}><td><b>{c.title}</b><div className="small muted">{c.brand?.name}</div></td><td>{VOUCHER_TYPES[c.voucherType]}<div className="small muted">{valueText(c)}</div></td><td>{money(c.salePrice)}</td><td>{dateTime(c.submittedAt)}</td><td><Link className="btn btn-ghost btn-sm" to={`/web/admin/campaigns?campaign=${c.id}`}>Xem / duyệt</Link></td></tr>)}</tbody></table></div>}</section>
           <div className="grid4 mt">
             <div className="stat"><div className="small muted">Chiến dịch đang bán</div><div className="v">{r.publishedCampaigns}</div></div>
             <div className="stat"><div className="small muted">Chiến dịch chờ duyệt</div><div className="v">{r.pendingCampaigns}</div></div>
@@ -85,12 +89,18 @@ export function AdminBrands() {
 
 export function AdminCampaigns() {
   const [status, setStatus] = useState('PENDING');
+  const [search, setSearch] = useState('');
+  const [type, setType] = useState('');
+  const [brand, setBrand] = useState('');
+  const [approval, setApproval] = useState(null);
+  const [detail, setDetail] = useState(() => new URLSearchParams(window.location.search).get('campaign'));
   const list = useLoad(() => webApi.get(status === 'PENDING' ? '/admin/campaigns/pending' : `/admin/campaigns${status ? `?status=${status}` : ''}`), [status]);
+  const filtered = list.data?.filter(c => (!type || c.voucherType === type) && (!brand || c.brand?.id === brand) && `${c.title} ${c.brand?.name || ''}`.toLocaleLowerCase('vi').includes(search.toLocaleLowerCase('vi')));
   const [reject, setReject] = useState(null);
   const [busy, run] = useAction();
   const approve = async (c) => {
     const r = await run(() => webApi.patch(`/admin/campaigns/${c.id}/approve`), `Đã duyệt "${c.title}".`);
-    if (r) list.reload(true);
+    if (r) { setApproval(null); list.reload(true); }
   };
   const runJob = async () => {
     const r = await run(() => webApi.post('/admin/jobs/campaign-transitions'));
@@ -106,7 +116,10 @@ export function AdminCampaigns() {
           <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={runJob} title="Tác vụ nền chạy 5 phút / lần">⟳ Chạy rà soát trạng thái</button>
         </div>
       </div>
-      {list.loading && !list.data ? <Spinner /> : list.data?.length === 0 ? <Empty icon="✓">Không có chiến dịch.</Empty> : list.data?.map((c) => (
+      <div className="filter-bar"><input className="input" aria-label="Tìm chiến dịch hoặc thương hiệu" placeholder="Tìm chiến dịch, thương hiệu…" value={search} onChange={e => setSearch(e.target.value)} /><select className="input" aria-label="Loại voucher" value={type} onChange={e => setType(e.target.value)}><option value="">Tất cả loại voucher</option>{Object.entries(VOUCHER_TYPES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select><select className="input" aria-label="Thương hiệu trong danh sách" value={brand} onChange={e => setBrand(e.target.value)}><option value="">Tất cả thương hiệu</option>{[...new Map((list.data || []).filter(c => c.brand?.id).map(c => [c.brand.id, c.brand])).values()].map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
+      <ErrorBox error={list.error} onRetry={list.reload} />
+      {list.loading && !list.data ? <Spinner /> : filtered?.length === 0 ? <Empty icon="✓">Không có chiến dịch phù hợp.</Empty> : <div className="card"><div className="table-scroll"><table className="table"><thead><tr><th>Chiến dịch / thương hiệu</th><th>Quyền lợi voucher</th><th>Giá bán</th><th>Ngày gửi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{filtered?.map(c => <tr key={c.id}><td><b>{c.title}</b><div className="small muted">{c.brand?.name}</div></td><td>{VOUCHER_TYPES[c.voucherType]}<div className="small muted">{valueText(c)}</div></td><td>{money(c.salePrice)}</td><td>{dateTime(c.submittedAt)}</td><td><StatusBadge map={CAMPAIGN_STATUS} value={c.status} /></td><td><div className="row gap"><button type="button" className="btn btn-ghost btn-sm" onClick={() => setDetail(detail === c.id ? null : c.id)}>Chi tiết</button>{c.status === 'PENDING' && <><button type="button" className="btn btn-sm" disabled={busy} onClick={() => setApproval(c)}>Duyệt</button><button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setReject(c)}>Từ chối</button></>}</div></td></tr>)}</tbody></table></div></div>}
+      {list.data?.filter(c => c.id === detail).map((c) => (
         <div key={c.id} className="card">
           <div className="row between gap">
             <div className="grow">
@@ -119,12 +132,13 @@ export function AdminCampaigns() {
           </div>
           {c.status === 'PENDING' && (
             <div className="row gap mt">
-              <button type="button" className="btn btn-sm" disabled={busy} onClick={() => approve(c)}>✓ Duyệt</button>
+              <button type="button" className="btn btn-sm" disabled={busy} onClick={() => setApproval(c)}>✓ Duyệt</button>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setReject(c)}>✕ Từ chối</button>
             </div>
           )}
         </div>
       ))}
+      <PromptDialog open={!!approval} title="Duyệt chiến dịch" message={`Xác nhận duyệt “${approval?.title}”? Chiến dịch sẽ mở bán theo lịch và các quy tắc hiện tại.`} required={false} confirmText="Duyệt chiến dịch" onClose={() => setApproval(null)} onConfirm={() => approve(approval)} />
       <PromptDialog open={!!reject} title={`Từ chối "${reject?.title}"`} message="Chiến dịch sẽ về Nháp để thương hiệu sửa." label="Lý do từ chối" confirmText="Từ chối"
         onClose={() => setReject(null)} onConfirm={async (reason) => {
           const r = await run(() => webApi.patch(`/admin/campaigns/${reject.id}/reject`, { reason }), 'Đã từ chối chiến dịch.');

@@ -1,4 +1,6 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { VoucherBenefit } from './MarketplaceUI';
+import { Icon } from '../components/Icon';
 import { customerApi, useSession } from '../api/client';
 import { Badge, CampaignImage, ErrorBox, Spinner, useAction, useLoad } from '../components/ui';
 import { date, dateTime, km, money, VOUCHER_TYPES } from '../utils/format';
@@ -38,29 +40,19 @@ export function CampaignDetail() {
 
   return (
     <div>
-      <TopBar title="Chi tiết voucher" right={<button type="button" className="bell" disabled={busy} onClick={toggleFavorite} aria-label="Yêu thích">{c.favorited ? '❤️' : '🤍'}</button>} />
-      <div className="screen" style={{ paddingTop: 0 }}>
-        <CampaignImage src={c.image} className="detail-img" />
-        <div className="mt">
-          <h2>{c.title}</h2>
-          <div className="small muted">{VOUCHER_TYPES[c.voucherType]}</div>
-          <div className="row gap mt">
-            <span className="price" style={{ fontSize: 22 }}>{money(c.salePrice)}</span>
-            {c.discountPercent > 0 && <Badge tone="bad">-{c.discountPercent}%</Badge>}
-          </div>
-          <div className="small muted">{valueText(c)}</div>
-          <div className="small muted">Còn lại: {c.availableQuantity} voucher · Đã bán {c.soldQuantity} · Tối đa {c.limitPerUser} / tài khoản</div>
-        </div>
+      <TopBar title="Chi tiết voucher" right={<button type="button" className="bell" disabled={busy} onClick={toggleFavorite} aria-label="Yêu thích" aria-pressed={c.favorited}><Icon name="heart" /></button>} />
+      <div className="screen detail-screen" style={{ paddingTop: 0 }}><div className="detail-layout"><div className="detail-content">
+        <CampaignImage src={c.image || c.brand?.logo} fallbackLabel={c.brand?.name || c.title} className={`detail-img ${!c.image ? 'brand-art' : ''}`} />
 
         {c.brand && (
-          <div className="card mt row gap" onClick={() => navigate(`/brands/${c.brand.id}`)} role="button">
+          <Link className="card mt row gap" to={`/brands/${c.brand.id}`} style={{ color: 'var(--text)' }}>
             {c.brand.logo ? <img src={c.brand.logo} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'contain', background: '#fff' }} /> : <span style={{ fontSize: 28 }}>🏪</span>}
             <div className="grow"><div className="bold">{c.brand.name}</div><div className="small muted">Xem trang thương hiệu</div></div>
             <span>›</span>
-          </div>
+          </Link>
         )}
-        {c.description && <div className="card"><div className="card-title">Mô tả</div>{c.description}</div>}
-        <div className="card"><div className="card-title">Điều kiện áp dụng</div>{c.terms || 'Không có điều kiện đặc biệt.'}</div>
+        {c.description && <div className="card mt"><div className="card-title">Về voucher này</div><p className="detail-description">{c.description}</p></div>}
+        <div className="card"><div className="card-title">Điều kiện áp dụng</div><p className="detail-description">{c.terms || 'Không có điều kiện đặc biệt.'}</p></div>
         <div className="card"><div className="card-title">Thời gian</div>
           <div>Bán đến: {dateTime(c.saleEndAt)}</div>
           <div>Hạn sử dụng: {dateTime(c.voucherExpireAt)}</div>
@@ -96,12 +88,19 @@ export function CampaignDetail() {
           ))}
         </div>
 
-        <div className="sticky-bottom">
+        </div><aside className="card detail-purchase">
+          <span className={`voucher-type-inline type-${c.voucherType}`}>{VOUCHER_TYPES[c.voucherType]}</span>
+          <h2>{c.title}</h2>
+          {c.brand && <Link to={`/brands/${c.brand.id}`} className="merchant-link"><Icon name="store" size={17} />{c.brand.name}<span>↗</span></Link>}
+          <VoucherBenefit voucher={c} detailed />
+          <div className="purchase-price"><span>{c.voucherType === 'CASHBACK' ? 'Giá mua quyền nhận Cashback' : 'Giá mua voucher'}</span><b>{money(c.salePrice)}</b></div>
+          <div className="detail-facts"><span>Còn {c.availableQuantity} voucher</span><span>Đã bán {c.soldQuantity}</span><span>HSD {date(c.voucherExpireAt)}</span><span>Tối đa {c.limitPerUser}/tài khoản</span></div>
           <button type="button" className="btn btn-block" disabled={!c.canPurchase} onClick={() => navigate(session ? `/checkout/${c.id}` : `/login?next=/checkout/${c.id}`)}>
-            {c.canPurchase ? 'Mua ngay' : 'Đã hết hàng'}
+            {c.canPurchase ? 'Mua voucher ngay' : 'Đã hết hàng'} <Icon name="arrow" />
           </button>
-        </div>
-      </div>
+          <p className="auth-help">Chọn số lượng và kiểm tra thông tin tại bước thanh toán.</p>
+        </aside>
+      </div></div>
     </div>
   );
 }

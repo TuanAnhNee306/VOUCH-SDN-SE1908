@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Spinner } from './components/ui';
 import { CustomerLayout, RequireCustomer } from './customer/Layout';
 import Explore from './customer/Explore';
 import { Search, MapPage } from './customer/Search';
@@ -7,12 +9,12 @@ import { Checkout, PaymentResult, PaymentReturn } from './customer/Checkout';
 import { Wallet, VoucherDetail, UseVoucher, ReviewPage } from './customer/Wallet';
 import { RefundRequestPage, RefundList } from './customer/Refund';
 import { Login, Profile, Orders, Notifications, NotificationSettings, Favorites } from './customer/Account';
-import WebApp from './web/WebApp';
+const WebApp = lazy(() => import('./web/WebApp'));
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/web/*" element={<WebApp />} />
+      <Route path="/web/*" element={<Suspense fallback={<Spinner />}><WebApp /></Suspense>} />
 
       <Route element={<CustomerLayout nav />}>
         <Route path="/" element={<Explore />} />

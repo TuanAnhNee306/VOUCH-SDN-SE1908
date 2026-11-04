@@ -16,6 +16,10 @@ export function BrandCampaigns() {
   const { brand } = useBrand();
   const list = useLoad(() => webApi.get(`/brand/${brand.id}/campaigns`), [brand.id]);
   const [confirm, setConfirm] = useState(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [type, setType] = useState('');
+  const filtered = list.data?.filter(c => (!status || c.status === status) && (!type || c.voucherType === type) && c.title.toLocaleLowerCase('vi').includes(search.toLocaleLowerCase('vi')));
   const [busy, run] = useAction();
   const act = async (c, action, msg) => {
     const r = await run(() => webApi.patch(`/brand/${brand.id}/campaigns/${c.id}/${action}`), msg);
@@ -32,7 +36,8 @@ export function BrandCampaigns() {
         </div>
       </div>
       <ErrorBox error={list.error} />
-      {list.loading && !list.data ? <Spinner /> : list.data?.length === 0 ? <Empty icon="📣">Chưa có chiến dịch nào.</Empty> : list.data?.map((c) => (
+      <div className="filter-bar"><input className="input" aria-label="Tìm chiến dịch" placeholder="Tìm theo tên chiến dịch…" value={search} onChange={e => setSearch(e.target.value)} /><select className="input" aria-label="Trạng thái chiến dịch" value={status} onChange={e => setStatus(e.target.value)}><option value="">Tất cả trạng thái</option>{Object.entries(CAMPAIGN_STATUS).map(([v, [label]]) => <option key={v} value={v}>{label}</option>)}</select><select className="input" aria-label="Loại voucher" value={type} onChange={e => setType(e.target.value)}><option value="">Tất cả loại voucher</option>{Object.entries(VOUCHER_TYPES).map(([v, label]) => <option key={v} value={v}>{label}</option>)}</select></div>
+      {list.loading && !list.data ? <Spinner /> : filtered?.length === 0 ? <Empty icon="◇">Không có chiến dịch phù hợp.</Empty> : filtered?.map((c) => (
         <div key={c.id} className="card">
           <div className="row between gap">
             <div className="grow">
@@ -40,6 +45,7 @@ export function BrandCampaigns() {
               <div className="small muted">{VOUCHER_TYPES[c.voucherType]} · Giá bán {money(c.salePrice)} · {valueText(c)} · Đã bán {c.soldQuantity}/{c.totalQuantity} · Còn {c.availableQuantity} · Tối đa {c.limitPerUser}/người</div>
               <div className="small muted">Bán {date(c.saleStartAt)} – {date(c.saleEndAt)} · HSD {date(c.voucherExpireAt)} · Chi nhánh: {c.stores.map((s) => s.name).join(', ')}</div>
               {c.rejectReason && c.status === 'DRAFT' && <div className="alert alert-bad small">Bị từ chối: {c.rejectReason}</div>}
+              <details className="mt"><summary className="small muted">Chi tiết và mốc xét duyệt</summary><p className="small">{c.description || 'Chưa có mô tả.'}</p><p className="small">Điều kiện: {c.terms || '—'}</p><ol className="campaign-milestones"><li>Tạo nháp · {dateTime(c.createdAt)}</li>{c.submittedAt && <li>Gửi duyệt · {dateTime(c.submittedAt)}</li>}{c.approvedAt && <li>Được duyệt · {dateTime(c.approvedAt)}</li>}<li>Hiện tại · {CAMPAIGN_STATUS[c.status]?.[0] || c.status}</li></ol></details>
             </div>
             <div className="price">{money(c.salePrice)}</div>
           </div>
@@ -75,6 +81,7 @@ export function CampaignForm() {
   const [form, setForm] = useState(null);
   const submitting = useRef(false);
   const [locked, setLocked] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
   const [busy, run] = useAction();
   useLoad(async () => {
     if (!id) return setForm(EMPTY);
@@ -97,8 +104,9 @@ export function CampaignForm() {
     e.preventDefault();
     if (submitting.current || busy) return;
     const validationError = validateVoucherForm(form);
-    if (validationError) return toast(validationError, 'bad');
-    if (!form.storeIds.length) return toast('Chọn ít nhất một chi nhánh.', 'bad');
+    if (validationError) { setValidationMessage(validationError); return toast(validationError, 'bad'); }
+    if (!form.storeIds.length) { setValidationMessage('Chọn ít nhất một chi nhánh.'); return toast('Chọn ít nhất một chi nhánh.', 'bad'); }
+    setValidationMessage('');
     if (form.voucherType === 'STORED_VALUE' && Number(form.salePrice) >= Number(form.faceValue)) return toast('Giá bán phải nhỏ hơn mệnh giá.', 'bad');
     const body = {
       ...form,
@@ -124,11 +132,14 @@ export function CampaignForm() {
   };
 
   return (
-    <form onSubmit={submit} style={{ maxWidth: 760 }}>
-      <div className="page-head"><h1>{id ? 'Sửa chiến dịch' : 'Tạo chiến dịch mới'}</h1></div>
+    <form onSubmit={submit} className="campaign-form">
+      <div className="page-head"><div><div className="eyebrow">VOUCHER STUDIO</div><h1>{id ? 'Sửa chiến dịch' : 'Tạo chiến dịch mới'}</h1><p className="muted">Thiết lập ưu đãi, thời gian và chi nhánh áp dụng.</p></div><span className="badge badge-info">{brand.name}</span></div>
       {locked && <div className="alert alert-warn small">Chiến dịch đã bán được voucher: không sửa được giá bán, giá trị, loại voucher và hạn sử dụng (BR-17).</div>}
+      <ErrorBox error={stores.error || categories.error} />
+      {validationMessage && <div className="alert alert-bad" role="alert">{validationMessage}</div>}
+      <div className="form-layout"><div>
       <div className="card">
-        <div className="card-title">Thông tin chung</div>
+        <div className="card-title"><span className="form-section-number">1</span>Thông tin chung</div>
         <label className="field"><span>Tiêu đề *</span><input required value={form.title} onChange={set('title')} /></label>
         <div className="grid2">
           <label className="field"><span>Loại voucher *</span>
@@ -143,7 +154,7 @@ export function CampaignForm() {
         <label className="field"><span>Điều kiện áp dụng</span><textarea required disabled={locked} rows={2} value={form.terms} onChange={set('terms')} /></label>
       </div>
       <div className="card">
-        <div className="card-title">Giá và số lượng</div>
+        <div className="card-title"><span className="form-section-number">2</span>Quyền lợi và số lượng</div>
         <div className="grid2">
           <label className="field"><span>Giá bán (VND) *</span><input type="number" min="1" required disabled={locked} value={form.salePrice} onChange={set('salePrice')} /></label>
           {form.voucherType !== 'CASHBACK' && <label className="field"><span>Mệnh giá (VND) *</span><input type="number" min="1" required disabled={locked} value={form.faceValue} onChange={set('faceValue')} /></label>}
@@ -176,7 +187,7 @@ export function CampaignForm() {
         </div>
       </div>
       <div className="card">
-        <div className="card-title">Thời gian (giờ Việt Nam)</div>
+        <div className="card-title"><span className="form-section-number">3</span>Thời gian (giờ Việt Nam)</div>
         <div className="grid3">
           <label className="field"><span>Bắt đầu bán *</span><input type="datetime-local" required disabled={locked} value={form.saleStartAt} onChange={set('saleStartAt')} /></label>
           <label className="field"><span>Kết thúc bán *</span><input type="datetime-local" required disabled={locked} value={form.saleEndAt} onChange={set('saleEndAt')} /></label>
@@ -185,7 +196,7 @@ export function CampaignForm() {
         <div className="small muted">Hạn sử dụng phải sau ngày kết thúc bán ít nhất 10 ngày (BR-21).</div>
       </div>
       <div className="card">
-        <div className="card-title">Chi nhánh áp dụng *</div>
+        <div className="card-title"><span className="form-section-number">4</span>Chi nhánh áp dụng *</div>
         {stores.data?.filter((s) => s.status).map((s) => (
           <label key={s.id} className="check"><input type="checkbox" disabled={locked} checked={form.storeIds.includes(s.id)} onChange={() => toggleStore(s.id)} /><span><b>{s.name}</b> <span className="small muted">{s.address}</span></span></label>
         ))}
@@ -193,8 +204,9 @@ export function CampaignForm() {
       </div>
       <div className="row end gap mt">
         <button type="button" className="btn btn-ghost" onClick={() => navigate('/web/brand/campaigns')}>Hủy</button>
-        <button className="btn" disabled={busy}>{id ? 'Lưu thay đổi' : 'Lưu nháp'}</button>
+        <button className="btn" disabled={busy}>{busy ? 'Đang lưu…' : id ? 'Lưu thay đổi' : 'Lưu nháp'}</button>
       </div>
+      </div><aside className="card voucher-preview"><div className="eyebrow">XEM TRƯỚC VOUCHER</div><div className="preview-ticket"><div className="preview-type">{VOUCHER_TYPES[form.voucherType]}</div><h3>{form.title || 'Tên voucher của bạn'}</h3><p className="small muted">{brand.name}</p><hr /><div className="small muted">Giá bán voucher</div><div className="preview-price">{form.salePrice ? money(form.salePrice) : '—'}</div>{form.voucherType === 'CASHBACK' ? <p className="small">Hoàn {form.cashbackType === 'PERCENTAGE' ? `${form.cashbackValue || '—'}%` : money(form.cashbackValue || 0)}{form.maxCashbackAmount ? ` · Tối đa ${money(form.maxCashbackAmount)}` : ''}</p> : <p className="small">Mệnh giá {money(form.faceValue || 0)} · Tiết kiệm {money(Math.max(0, Number(form.faceValue) - Number(form.salePrice)))}</p>}<hr /><p className="small muted">{form.storeIds.length} chi nhánh áp dụng</p><p className="small muted">{form.totalQuantity} voucher · Tối đa {form.limitPerUser}/khách</p></div><p className="small muted mt">Lưu nháp để kiểm tra lại. Gửi duyệt tại danh sách chiến dịch khi thông tin đã đầy đủ.</p>{form.voucherType === 'CASHBACK' && <div className="alert alert-info small">Khách thanh toán đủ hóa đơn tại cửa hàng. Merchant hoàn tiền trực tiếp theo điều kiện voucher.</div>}</aside></div>
     </form>
   );
 }

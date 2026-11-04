@@ -14,7 +14,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastCtx.Provider value={push}>
       {children}
-      <div className="toasts">
+      <div className="toasts" role="status" aria-live="polite">
         {items.map((t) => (
           <div key={t.id} className={`toast toast-${t.tone}`}>{t.message}</div>
         ))}
@@ -76,7 +76,7 @@ export function StatusBadge({ map, value }) {
 }
 
 export function Spinner({ text = 'Đang tải...' }) {
-  return <div className="muted center pad">{text}</div>;
+  return <div className="muted center pad loading-state" role="status"><span className="loading-indicator" aria-hidden="true" />{text}</div>;
 }
 
 export function ErrorBox({ error, onRetry }) {
@@ -102,6 +102,27 @@ export function Empty({ icon = '🗂️', children }) {
 export function PromptDialog({ open, title, message, label, placeholder, confirmText = 'Xác nhận', required = true, onConfirm, onClose }) {
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
+  const dialogRef = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    if (!open) return undefined;
+    const previous = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.querySelector('input, button')?.focus();
+    const keyboard = e => {
+      if (e.key === 'Escape' && !busy) closeRef.current();
+      if (e.key === 'Tab') {
+        const nodes = [...dialogRef.current.querySelectorAll('input:not(:disabled), button:not(:disabled)')];
+        const first = nodes[0]; const last = nodes[nodes.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      }
+    };
+    document.addEventListener('keydown', keyboard);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', keyboard); previous?.focus(); };
+  }, [open, busy]);
   useEffect(() => {
     if (open) setValue('');
   }, [open]);
@@ -117,8 +138,8 @@ export function PromptDialog({ open, title, message, label, placeholder, confirm
     }
   };
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
+    <div className="modal-backdrop" onClick={() => !busy && onClose()}>
+      <form ref={dialogRef} className="modal" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <h3>{title}</h3>
         {message && <p className="muted">{message}</p>}
         {label !== undefined && (
@@ -128,7 +149,7 @@ export function PromptDialog({ open, title, message, label, placeholder, confirm
           </label>
         )}
         <div className="row end gap">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>Hủy</button>
+          <button type="button" className="btn btn-ghost" disabled={busy} onClick={onClose}>Hủy</button>
           <button className="btn" disabled={busy || (required && label !== undefined && !value.trim())}>{confirmText}</button>
         </div>
       </form>
