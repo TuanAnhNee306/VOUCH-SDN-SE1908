@@ -12,7 +12,9 @@ function askNotificationPermission() {
 // Dang nhap bang OTP 6 so gui qua email (hieu luc 5 phut, gui lai sau 60 giay)
 export function Login() {
   const navigate = useNavigate();
-  const next = new URLSearchParams(window.location.search).get('next') || '/me';
+  // Default successful OTP sign-in to the Explore/home screen. A specific
+  // `next` destination (for example, continuing checkout) still takes priority.
+  const next = new URLSearchParams(window.location.search).get('next') || '/';
   const [step, setStep] = useState('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
