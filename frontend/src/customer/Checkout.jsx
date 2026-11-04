@@ -133,7 +133,7 @@ export function PaymentResult() {
 
         {o.status === 'PENDING' && (
           <div className="col gap mt">
-            {paymentUrl && <a className="btn btn-block" href={paymentUrl} target="_blank" rel="noreferrer">Mở trang thanh toán VNPAY</a>}
+            {paymentUrl && <a className="btn btn-block" href={paymentUrl}>Tiếp tục thanh toán qua VNPAY</a>}
             {config.data?.paymentSimulator && (
               <>
                 <button type="button" className="btn btn-block" disabled={busy} onClick={() => simulate('success')}>Thanh toán thử (demo)</button>
@@ -147,7 +147,7 @@ export function PaymentResult() {
               </>
             )}
             {!paymentUrl && !config.data?.paymentSimulator && (
-              <button type="button" className="btn btn-block" disabled={busy} onClick={retry}>Thanh toán lại</button>
+              <button type="button" className="btn btn-block" disabled={busy} onClick={retry}>Tiếp tục thanh toán</button>
             )}
             <button type="button" className="btn btn-ghost btn-block" onClick={() => order.reload()}>⟳ Kiểm tra lại</button>
           </div>
@@ -167,7 +167,10 @@ export function PaymentResult() {
 export function PaymentReturn() {
   const navigate = useNavigate();
   const session = useSession(customerApi);
-  const code = new URLSearchParams(window.location.search).get('orderCode');
+  // VNPAY sends the merchant order reference as vnp_TxnRef. Keep orderCode
+  // as a compatibility fallback for the existing demo gateway.
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('vnp_TxnRef') || params.get('orderCode');
   useEffect(() => {
     if (!session) return;
     customerApi.get('/orders/me').then((list) => {

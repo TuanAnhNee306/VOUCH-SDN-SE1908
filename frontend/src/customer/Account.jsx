@@ -173,10 +173,11 @@ export function Orders() {
                 <div className="bold">{o.campaign?.title}</div>
                 <div className="small muted">{money(o.totalAmount)} · SL {o.quantity} · {dateTime(o.createdAt)}</div>
                 {o.status === 'PENDING' && <div className="small muted">Giữ chỗ đến: {dateTime(o.reservedUntil)}</div>}
+                <div className="mt"><StatusBadge map={ORDER_STATUS} value={o.status} /></div>
               </div>
               {canPay ? (
-                <button type="button" className="btn btn-sm" disabled={busy} onClick={(e) => { e.stopPropagation(); pay(o); }}>Thanh toán lại</button>
-              ) : <StatusBadge map={ORDER_STATUS} value={o.status} />}
+                <button type="button" className="btn btn-sm" disabled={busy} onClick={(e) => { e.stopPropagation(); pay(o); }}>Tiếp tục thanh toán</button>
+              ) : null}
             </div>
           );
         })}
