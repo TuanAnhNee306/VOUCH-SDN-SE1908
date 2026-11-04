@@ -40,6 +40,27 @@ const OtpCode = schema({
   usedAt: { type: Date, default: null },
 });
 
+// Dedicated single active login challenge per normalized email. No migration of
+// historical activation/reset codes or production users is required.
+const LoginOtp = schema({
+  _id: String,
+  userId: { type: Id, ref: 'User', default: null },
+  nonce: { type: String, required: true },
+  codeHash: { type: String, required: true },
+  attempts: { type: Number, default: 0 },
+  expiresAt: { type: Date, required: true },
+  nextRequestAt: { type: Date, required: true },
+  usedAt: { type: Date, default: null },
+});
+LoginOtp.index({ expiresAt: 1 }, { expireAfterSeconds: 7200 });
+
+const AuthLimit = schema({
+  _id: String,
+  count: { type: Number, required: true },
+  expiresAt: { type: Date, required: true },
+});
+AuthLimit.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 // Phien dang nhap (refresh token). activeStoreId: chi nhanh nhan vien dang lam trong phien (FR-AUTH-12)
 const Session = schema({
   userId: { type: Id, ref: 'User', required: true, index: true },
@@ -310,6 +331,8 @@ const model = (name, s) => mongoose.models[name] || mongoose.model(name, s);
 module.exports = {
   User: model('User', User),
   OtpCode: model('OtpCode', OtpCode),
+  LoginOtp: model('LoginOtp', LoginOtp),
+  AuthLimit: model('AuthLimit', AuthLimit),
   Session: model('Session', Session),
   Category: model('Category', Category),
   Brand: model('Brand', Brand),

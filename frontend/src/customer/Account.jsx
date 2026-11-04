@@ -4,7 +4,7 @@ import { customerApi, useSession } from '../api/client';
 import { Badge, CampaignImage, Empty, ErrorBox, Logo, Spinner, StatusBadge, useAction, useLoad, useToast } from '../components/ui';
 import { dateTime, money, ORDER_STATUS } from '../utils/format';
 import { useUnread, TopBar } from './Layout';
-import { AuthLayout } from '../components/AuthLayout';
+import { EmailOtpLogin } from '../components/EmailOtpLogin';
 import { Icon } from '../components/Icon';
 
 function askNotificationPermission() {
@@ -13,84 +13,7 @@ function askNotificationPermission() {
 
 // Dang nhap bang OTP 6 so gui qua email (hieu luc 5 phut, gui lai sau 60 giay)
 export function Login() {
-  const navigate = useNavigate();
-  // Default successful OTP sign-in to the Explore/home screen. A specific
-  // `next` destination (for example, continuing checkout) still takes priority.
-  const next = new URLSearchParams(window.location.search).get('next') || '/';
-  const [step, setStep] = useState('email');
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [devOtp, setDevOtp] = useState(null);
-  const [cooldown, setCooldown] = useState(0);
-  const [error, setError] = useState(null);
-  const [busy, run] = useAction();
-
-  useEffect(() => {
-    if (cooldown <= 0) return undefined;
-    const t = setTimeout(() => setCooldown(cooldown - 1), 1000);
-    return () => clearTimeout(t);
-  }, [cooldown]);
-
-  const send = async (e) => {
-    e?.preventDefault();
-    if (busy) return;
-    setError(null);
-    const r = await run(() => customerApi.post('/auth/otp/request', { email }).catch(e => { setError(e); throw e; }), 'Đã gửi mã OTP.');
-    if (r) {
-      setDevOtp(r.devOtp || null);
-      setStep('otp');
-      setCooldown(60);
-    }
-  };
-  const verify = async (e) => {
-    e.preventDefault();
-    if (busy) return;
-    setError(null);
-    const r = await run(() => customerApi.post('/auth/otp/verify', { email, otp }).catch(e => { setError(e); throw e; }));
-    if (r) {
-      customerApi.setSession(r);
-      askNotificationPermission();
-      navigate(next, { replace: true });
-    }
-  };
-
-  if (step === 'otp') {
-    return (
-      <AuthLayout>
-        <div className="brand-icon"><Icon name="mail" /></div><div className="brand-eyebrow mt">XÁC THỰC EMAIL</div><h2>Kiểm tra hộp thư của bạn</h2>
-        <p className="auth-description">Nhập mã gồm 6 chữ số đã gửi đến <b>{email}</b>.</p>
-        <form onSubmit={verify}>
-          <label className="field"><span>Mã xác thực OTP</span><input className="otp-input" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} required /></label>
-          <ErrorBox error={error} />
-          {devOtp && (
-            <div className="demo-box small mt">Chế độ demo (MAIL_MODE=console): mã OTP là <b className="mono">{devOtp}</b>{' '}
-              <button type="button" className="link" onClick={() => setOtp(devOtp)}>Điền</button>
-            </div>
-          )}
-          <button className="btn btn-block mt" disabled={busy || otp.length !== 6}>{busy ? 'Đang xác thực…' : 'Xác nhận & tiếp tục'} <Icon name="arrow" /></button>
-          <button type="button" className="link mt" disabled={cooldown > 0 || busy} onClick={send}>
-            {cooldown > 0 ? `Gửi lại mã sau ${cooldown}s` : 'Gửi lại mã'}
-          </button>
-          <div className="mt"><button type="button" className="link small" disabled={busy} onClick={() => { setStep('email'); setError(null); }}>← Đổi địa chỉ email</button></div>
-          <p className="auth-help">Mã có hiệu lực 5 phút. Kiểm tra thư mục spam nếu chưa thấy email.</p>
-        </form>
-      </AuthLayout>
-    );
-  }
-  return (
-    <AuthLayout>
-      <div className="brand-eyebrow">CHÀO MỪNG ĐẾN VỚI VOUCH.</div><h2>Ưu đãi bắt đầu từ đây.</h2>
-      <p className="auth-description">Đăng nhập hoặc bắt đầu với email của bạn. Nhận mã xác thực để khám phá và quản lý voucher.</p>
-      <form onSubmit={send}>
-        <label className="field"><span>Địa chỉ email</span>
-          <input type="email" autoComplete="email" placeholder="ban@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
-        <ErrorBox error={error} />
-        <button className="btn btn-block" disabled={busy}>{busy ? 'Đang gửi mã…' : 'Tiếp tục bằng email'} <Icon name="arrow" /></button>
-        <p className="auth-help">Không cần ghi nhớ mật khẩu. Mã OTP 6 số có hiệu lực 5 phút. Mỗi email tối đa 5 lần / giờ.</p>
-      </form>
-    </AuthLayout>
-  );
+  return <EmailOtpLogin />;
 }
 
 export function Profile() {

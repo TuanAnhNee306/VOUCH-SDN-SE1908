@@ -5,8 +5,8 @@ const { Role } = require('../utils/enums');
 const { User } = require('../models');
 const auth = require('../services/auth');
 
-router.post('/otp/request', ah(async (req, res) => res.json(await auth.requestOtp(req.body.email))));
-router.post('/otp/verify', ah(async (req, res) => res.json(await auth.verifyOtp(req.body.email, req.body.otp, req.body.deviceId))));
+router.post('/otp/request', ah(async (req, res) => res.json(await auth.requestOtp(req.body.email, req.ip))));
+router.post('/otp/verify', ah(async (req, res) => res.json(await auth.verifyOtp(req.body.email, req.body.otp, req.body.deviceId, req.ip))));
 router.post('/login', ah(async (req, res) => res.json(await auth.login(req.body.email, req.body.password, req.body.deviceId))));
 router.post('/refresh', ah(async (req, res) => res.json(await auth.refresh(req.body.refreshToken))));
 router.post('/logout', authenticate, ah(async (req, res) => res.json(await auth.logout(req.user.userId, req.user.sessionId))));

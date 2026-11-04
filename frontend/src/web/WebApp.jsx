@@ -3,6 +3,7 @@ import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'reac
 import { BrandOverview, Icon, StaffOverview } from './Dashboard';
 import './dashboard.css';
 import { AuthLayout } from '../components/AuthLayout';
+import { ManagementLogin } from '../components/ManagementLogin';
 import { webApi, useSession } from '../api/client';
 import { ErrorBox, Logo, Spinner, useAction, useLoad } from '../components/ui';
 import { CashbackManagement } from './Cashback';
@@ -26,56 +27,7 @@ const NAV = {
 };
 
 function WebLogin() {
-  const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [forgot, setForgot] = useState(false);
-  const [info, setInfo] = useState(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState(null);
-  const [busy, run] = useAction();
-  const submit = async (e) => {
-    e.preventDefault();
-    if (busy) return;
-    setError(null);
-    if (forgot) {
-      const r = await run(() => webApi.post('/auth/password-reset/request', { email: form.email }).catch(e => { setError(e); throw e; }));
-      if (r) setInfo(r);
-      return;
-    }
-    const r = await run(() => webApi.post('/auth/login', form).catch(e => { setError(e); throw e; }));
-    if (r) {
-      webApi.setSession(r);
-      navigate(HOME[r.user.role], { replace: true });
-    }
-  };
-  const quick = [['admin@voucher.local', 'Quản trị'], ['owner@highlands.local', 'Chủ thương hiệu'], ['staff@highlands.local', 'Nhân viên']];
-  return (
-    <AuthLayout management>
-        <form onSubmit={submit}>
-          <div className="brand-eyebrow">VOUCH. MANAGEMENT</div>
-          <h2>{forgot ? 'Đặt lại mật khẩu' : 'Chào mừng trở lại.'}</h2>
-          <p className="auth-description">{forgot ? 'Nhập email tài khoản quản lý để nhận liên kết đặt lại mật khẩu.' : 'Đăng nhập hệ thống quản lý để tiếp tục công việc của bạn.'}</p>
-          <label className="field"><span>Email công việc</span><input type="email" autoComplete="username" placeholder="ten@thuonghieu.com" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-          {!forgot && <label className="field"><span>Mật khẩu</span><div className="password-input"><input type={showPassword ? 'text' : 'password'} autoComplete="current-password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /><button type="button" aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? 'Ẩn' : 'Hiện'}</button></div></label>}
-          <ErrorBox error={error} />
-          <button className="btn btn-block" disabled={busy}>{busy ? 'Đang xử lý…' : forgot ? 'Gửi liên kết đặt lại' : 'Đăng nhập hệ thống'} <Icon name="arrow" /></button>
-          {info && (
-            <div className="alert alert-info small">{info.message}
-              {info.devLink && <div className="mt">Demo: <a href={info.devLink}>mở liên kết đặt lại mật khẩu</a></div>}
-            </div>
-          )}
-          <div className="row between mt">
-            <button type="button" className="link small" disabled={busy} onClick={() => { setForgot(!forgot); setInfo(null); setError(null); }}>{forgot ? '← Quay lại đăng nhập' : 'Quên mật khẩu?'}</button>
-          </div>
-          <div className="auth-divider">MÔI TRƯỜNG DEMO</div><details className="demo-box small mt">
-            <summary>Tài khoản dùng thử</summary><p>Mật khẩu demo: Voucher@123</p>
-            {quick.map(([email, label]) => (
-              <div key={email}><button type="button" className="link small" onClick={() => setForm({ email, password: 'Voucher@123' })}>{label}: {email}</button></div>
-            ))}
-          </details>
-        </form>
-    </AuthLayout>
-  );
+  return <ManagementLogin />;
 }
 
 // Kich hoat tai khoan nhan vien / dat lai mat khau tu lien ket email

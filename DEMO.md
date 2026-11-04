@@ -37,8 +37,8 @@ Nhập sai mật khẩu 5 lần thì tài khoản bị khóa 15 phút.
 
 ## 2. Đăng nhập bằng mã OTP (mục 2)
 
-1. **Cá nhân → Đăng nhập** → nhập email thật → **Gửi mã OTP**.
-2. Mở Gmail → thư "`xxxxxx` là mã đăng nhập Voucher Platform" (không thấy thì xem mục Spam).
+1. **Cá nhân → Đăng nhập** → nhập email thật của tài khoản CUSTOMER đang ACTIVE → **Gửi mã OTP**. Email chưa tồn tại không tự tạo tài khoản. Cần cấu hình SMTP và OTP_SECRET theo [báo cáo](PASSWORDLESS_OTP_REPORT.md).
+2. Mở Gmail → thư "Mã xác thực đăng nhập Voucher Marketplace" (không thấy thì xem mục Spam).
 3. Nhập 6 số → **Xác nhận** → tab Cá nhân hiện tên và email.
 4. Nút "Gửi lại mã" chỉ bấm được sau 60 giây đếm ngược.
 5. *(Tùy chọn)* Nhập sai mã → báo "Mã OTP không hợp lệ...". Sai quá 5 lần thì mã bị hủy, phải xin mã mới.

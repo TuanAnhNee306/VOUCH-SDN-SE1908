@@ -1,5 +1,5 @@
 // Du lieu mau de demo. Chay `npm run seed` de xoa sach va nap lai; may chu tu nap khi CSDL con trong (AUTO_SEED).
-// Mat khau cac tai khoan web: Voucher@123. Khach hang dang nhap bang OTP (MAIL_MODE=console in ma ra man hinh may chu).
+// Mat khau cac tai khoan web: Voucher@123. Customer OTP requires real SMTP; no console codes.
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');

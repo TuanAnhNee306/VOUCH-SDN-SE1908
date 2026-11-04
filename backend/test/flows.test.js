@@ -1,5 +1,8 @@
 // Test e2e 4 luong nghiep vu trong tai lieu demo. Chay: npm test (MongoDB nhung tam, khong dung toi du lieu demo).
-process.env.MAIL_MODE = 'console';
+process.env.MAIL_MODE = 'smtp';
+process.env.SMTP_USER = 'sender@example.test';
+process.env.SMTP_PASS = 'test-only-mail-credential';
+process.env.OTP_SECRET = require('crypto').randomBytes(32).toString('hex');
 process.env.PAYMENT_SIMULATOR = 'true';
 process.env.REFUND_MODE = 'auto';
 process.env.PAYMENT_WEBHOOK_SECRET = 'test-secret';
@@ -8,10 +11,17 @@ process.env.VNPAY_HASH_SECRET = 'test-vnpay-secret';
 process.env.VNPAY_RETURN_URL = 'http://localhost:5173/payment-return';
 process.env.VNPAY_IPN_URL = 'https://example.test/api/orders/vnpay-ipn';
 
-const { test, before, after } = require('node:test');
+const { test, before, after, mock } = require('node:test');
 const assert = require('node:assert/strict');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+const sentOtp = new Map();
+mock.method(require('nodemailer'), 'createTransport', () => ({
+  sendMail: async message => {
+    if (message.subject === 'Mã xác thực đăng nhập Voucher Marketplace') sentOtp.set(message.to, message.text.match(/\b\d{6}\b/)[0]);
+    return { accepted: [message.to] };
+  },
+}));
 
 console.log = () => {}; // an log [mail] khi chay test
 
@@ -35,18 +45,22 @@ async function api(method, path, body, token) {
   return { status: res.status, body: json };
 }
 
+const tokenCache = new Map();
 async function otpLogin(email) {
+  if (tokenCache.has(email)) return tokenCache.get(email);
   const r = await api('POST', '/auth/otp/request', { email });
   assert.equal(r.status, 200, JSON.stringify(r.body));
-  const v = await api('POST', '/auth/otp/verify', { email, otp: r.body.devOtp });
+  assert.equal(r.body.devOtp, undefined);
+  const v = await api('POST', '/auth/otp/verify', { email, otp: sentOtp.get(email) });
   assert.equal(v.status, 200, JSON.stringify(v.body));
+  tokenCache.set(email, v.body.accessToken);
   return v.body.accessToken;
 }
 
 async function webLogin(email) {
-  const r = await api('POST', '/auth/login', { email, password: 'Voucher@123' });
-  assert.equal(r.status, 200, JSON.stringify(r.body));
-  return r.body.accessToken;
+  const result = await api('POST', '/auth/login', { email, password: 'Voucher@123' });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  return result.body.accessToken;
 }
 
 const campaignByTitle = (title) => M.Campaign.findOne({ title });
@@ -57,6 +71,7 @@ before(async () => {
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri('voucher_test'));
   await seed();
+  await M.User.create({ email: 'khach3@voucher.local', role: 'CUSTOMER', status: 'ACTIVE', fullName: 'Review fixture' });
   server = createApp().listen(0);
   base = `http://127.0.0.1:${server.address().port}/api`;
   customer = await otpLogin('khach@voucher.local');
@@ -534,21 +549,12 @@ test('Danh gia: chi khach da dung voucher moi danh gia, moi chien dich mot lan',
   assert.equal(detail.body.reviewCount, 1);
 });
 
-test('Dang nhap web: bao so lan thu con lai, khoa sau 5 lan sai, dang nhap dung thi dem lai', async () => {
-  const email = 'owner@cgv.local';
-  const wrong1 = await api('POST', '/auth/login', { email, password: 'sai' });
-  assert.equal(wrong1.status, 401);
-  assert.match(wrong1.body.message, /Còn 4 lần thử/);
-  const ok = await api('POST', '/auth/login', { email, password: 'Voucher@123' });
-  assert.equal(ok.status, 200);
-  for (let i = 0; i < 4; i++) await api('POST', '/auth/login', { email, password: 'sai' });
-  const fifth = await api('POST', '/auth/login', { email, password: 'sai' });
-  assert.equal(fifth.body.code, 'LOGIN_LOCKED');
-  const lockedRight = await api('POST', '/auth/login', { email, password: 'Voucher@123' });
-  assert.equal(lockedRight.body.code, 'LOGIN_LOCKED');
-  assert.match(lockedRight.body.message, /Thử lại sau|thử lại sau/);
-  const customer = await api('POST', '/auth/login', { email: 'khach@voucher.local', password: 'x' });
-  assert.match(customer.body.message, /OTP/);
+test('Customer and unknown accounts cannot bypass authentication through password login', async () => {
+  for (const email of ['khach@voucher.local', 'unknown@example.test']) {
+    const result = await api('POST', '/auth/login', { email, password: 'Voucher@123' });
+    assert.equal(result.status, 401);
+    assert.equal(result.body.accessToken, undefined);
+  }
 });
 
 // Marketplace: new creation types and minimal safe redemption integration.

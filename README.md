@@ -28,7 +28,7 @@ Mở bằng điện thoại cùng mạng Wi-Fi: dùng địa chỉ "Network" mà
 
 | Vai trò | Đăng nhập |
 |---|---|
-| Khách hàng | Email thật bất kỳ, đăng nhập bằng mã OTP gửi qua Gmail (`MAIL_MODE=smtp`). Khi `MAIL_MODE=console` thì mã chỉ in ra màn hình backend |
+| Khách hàng | Email thật thuộc tài khoản CUSTOMER đang ACTIVE, đăng nhập bằng OTP gửi qua SMTP. Không tự tạo tài khoản, không có OTP console/demo |
 | Nhân viên cửa hàng | `staff@highlands.local` / `Voucher@123` (gán Highlands Lê Lợi và Nguyễn Huệ) |
 | Chủ thương hiệu | `owner@highlands.local` / `Voucher@123` (thương hiệu khác: `owner@phuclong.local`, `owner@pizza4ps.local`...) |
 | Quản trị viên | `admin@voucher.local` / `Voucher@123` |
@@ -48,6 +48,7 @@ Tạo tự động từ `.env.example` khi chạy `npm run dev`. Các biến hay
 
 - `MONGO_URI`: chuỗi kết nối MongoDB (máy cài sẵn hoặc Atlas).
 - `MAIL_MODE=console | smtp`: `smtp` gửi OTP thật qua `SMTP_*` (Gmail cần App Password).
+- Customer OTP yêu cầu `MAIL_MODE=smtp`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`, `OTP_SECRET` tối thiểu 32 ký tự. Management vẫn đăng nhập email/mật khẩu khi chưa cấu hình SMTP. Hướng dẫn: [PASSWORDLESS_OTP_REPORT.md](PASSWORDLESS_OTP_REPORT.md).
 - `VNPAY_TMN_CODE / VNPAY_HASH_SECRET`: cấu hình VNPAY Sandbox ở backend. Không đưa hash secret vào frontend hoặc Git. Return URL: `VNPAY_RETURN_URL`; IPN HTTPS public: `GET /api/orders/vnpay-ipn`.
 - `PAYMENT_SIMULATOR=true`: chỉ bật nút "Thanh toán thử (demo)" trong môi trường phát triển/test.
 - `REFUND_MODE=auto | manual`, `REFUND_SANDBOX_RESULT`.
