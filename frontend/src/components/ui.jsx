@@ -28,14 +28,17 @@ export function useLoad(fn, deps = []) {
   const [state, setState] = useState({ data: null, error: null, loading: true });
   const fnRef = useRef(fn);
   fnRef.current = fn;
+  // Doi bo loc nhanh / tai lai lien tuc: phan hoi ve sau cua request cu khong duoc ghi de ket qua moi
+  const latest = useRef(0);
   const reload = useCallback(async (silent = false) => {
+    const call = ++latest.current;
     if (!silent) setState((s) => ({ ...s, loading: true }));
     try {
       const data = await fnRef.current();
-      setState({ data, error: null, loading: false });
+      if (call === latest.current) setState({ data, error: null, loading: false });
       return data;
     } catch (error) {
-      setState((s) => ({ ...s, error, loading: false }));
+      if (call === latest.current) setState((s) => ({ ...s, error, loading: false }));
       return null;
     }
   }, []);

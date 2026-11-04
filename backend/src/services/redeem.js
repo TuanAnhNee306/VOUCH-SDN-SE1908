@@ -1,5 +1,5 @@
 const { RedeemToken, VoucherItem, RedemptionLog, Campaign, Store, StaffAssignment, AuditLog } = require('../models');
-const { VoucherItemStatus, RedeemMethod } = require('../utils/enums');
+const { VoucherItemStatus, RedeemMethod, VoucherType } = require('../utils/enums');
 const { business, notFound } = require('../utils/errors');
 const { int } = require('../config/env');
 const { MINUTE, formatVnDateTime, startOfVnDay } = require('../utils/time');
@@ -140,8 +140,9 @@ async function redeem(staffUserId, { storeId, qrPayload, otpCode, billAmount }) 
       { stores: stores.map((s) => ({ id: String(s._id), name: s.name, address: s.address })) });
   }
   // Moi thu hop le, chi thieu hoa don: CHUA tieu ma de nhan vien nhap hoa don roi gui lai ngay (BR-03)
-  if (!failure && billRequired(campaign.voucherType, bill)) {
-    throw business('BILL_REQUIRED', 'Voucher mệnh giá bắt buộc nhập giá trị hóa đơn. Mã của khách vẫn còn hiệu lực, nhập hóa đơn rồi gửi lại.',
+  // Hoa don 0 d voi voucher menh gia la nhap nham: cung chua tieu ma
+  if (!failure && (billRequired(campaign.voucherType, bill) || (campaign.voucherType === VoucherType.PREPAID && bill === 0))) {
+    throw business('BILL_REQUIRED', 'Voucher mệnh giá bắt buộc nhập giá trị hóa đơn lớn hơn 0. Mã của khách vẫn còn hiệu lực, nhập hóa đơn rồi gửi lại.',
       { voucherType: campaign.voucherType, faceValue: campaign.faceValue });
   }
 
@@ -179,7 +180,12 @@ async function redeem(staffUserId, { storeId, qrPayload, otpCode, billAmount }) 
     billAmount: bill,
     billEditableUntil: new Date(now.getTime() + int('BILL_EDIT_WINDOW_MINUTES', 10) * MINUTE),
     storeName: store.name,
-    campaign: { id: String(campaign._id), title: campaign.title, voucherType: campaign.voucherType, faceValue: campaign.faceValue },
+    // Du thong tin de nhan vien biet phai giam / tru bao nhieu cho khach
+    campaign: {
+      id: String(campaign._id), title: campaign.title, voucherType: campaign.voucherType, faceValue: campaign.faceValue,
+      discountType: campaign.discountType, discountValue: campaign.discountValue, maxDiscount: campaign.maxDiscount,
+      comboItems: campaign.comboItems, terms: campaign.terms,
+    },
   };
 }
 
@@ -214,6 +220,9 @@ async function updateBill(staffUserId, logId, billAmount) {
   if (Date.now() > until.getTime()) {
     throw business('BILL_EDIT_EXPIRED', `Chỉ sửa được giá trị hóa đơn trong ${windowMin} phút sau khi xác nhận.`, { editableUntil: until.toISOString() });
   }
+  const item = await VoucherItem.findById(log.voucherItemId).select('campaignId');
+  const campaign = item && (await Campaign.findById(item.campaignId).select('voucherType'));
+  if (campaign?.voucherType === VoucherType.PREPAID && bill === 0) throw business('BILL_INVALID', 'Voucher mệnh giá cần giá trị hóa đơn lớn hơn 0.');
   log.billAmount = bill;
   log.billUpdatedAt = new Date();
   await log.save();

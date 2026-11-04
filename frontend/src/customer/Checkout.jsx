@@ -15,7 +15,10 @@ export function Checkout() {
 
   if (loading && !c) return <><TopBar title="Thanh toán" /><Spinner /></>;
   if (error) return <><TopBar title="Thanh toán" /><div className="screen"><ErrorBox error={error} /></div></>;
-  const max = Math.max(1, Math.min(c.limitPerUser, c.availableQuantity));
+  // Tru so voucher khach da mua / dang giu cho (may chu tinh) de nut + khoa dung luc
+  const quota = c.myRemainingQuota ?? c.limitPerUser;
+  const max = Math.max(1, Math.min(quota, c.availableQuantity));
+  const reachedLimit = quota <= 0;
 
   const submit = async () => {
     setErr(null);
@@ -24,6 +27,8 @@ export function Checkout() {
         return await customerApi.post('/orders', { campaignId: id, quantity: qty });
       } catch (e) {
         setErr(e.message);
+        // Vuot han muc (tinh ca voucher da mua): dua so luong ve muc con duoc mua de khach gui lai ngay
+        if (e.code === 'PURCHASE_LIMIT' && e.details?.remaining > 0) setQty(Math.min(qty, e.details.remaining));
         throw e;
       }
     });
@@ -52,13 +57,17 @@ export function Checkout() {
             <b>{qty}</b>
             <button type="button" disabled={qty >= max} onClick={() => setQty(qty + 1)}>+</button>
           </div>
-          <div className="small muted mt">Tối đa {c.limitPerUser} voucher cho mỗi tài khoản trong chiến dịch này.</div>
+          <div className="small muted mt">
+            Tối đa {c.limitPerUser} voucher cho mỗi tài khoản trong chiến dịch này
+            {c.myRemainingQuota != null && c.myRemainingQuota < c.limitPerUser ? ` · bạn còn được mua ${c.myRemainingQuota}` : ''}.
+          </div>
+          {reachedLimit && <div className="alert alert-warn small mt">Bạn đã mua đủ {c.limitPerUser} voucher (tính cả đơn đang chờ thanh toán) cho chiến dịch này.</div>}
         </div>
         <hr style={{ border: 0, borderTop: '1px solid var(--line)', margin: '16px 0' }} />
         <div className="row between"><b>Tổng tiền</b><span className="price">{money(c.salePrice * qty)}</span></div>
         <p className="small muted">Đơn hàng được giữ chỗ trong 15 phút. Nếu không hoàn tất thanh toán, đơn sẽ tự hủy và trả lại tồn kho.</p>
         {err && <div className="small" style={{ color: 'var(--bad)' }}>{err}</div>}
-        <button type="button" className="btn btn-block mt" disabled={busy || !c.canPurchase} onClick={submit}>Tiến hành thanh toán</button>
+        <button type="button" className="btn btn-block mt" disabled={busy || !c.canPurchase || reachedLimit} onClick={submit}>Tiến hành thanh toán</button>
       </div>
     </div>
   );
@@ -84,7 +93,8 @@ export function PaymentResult() {
 
   // Khong tin ket qua tra ve tu trinh duyet: hoi trang thai don tu may chu moi 3 giay khi con cho
   useEffect(() => {
-    if (o?.status !== 'PENDING') return undefined;
+    // PAID: da nhan tien, dang phat hanh voucher -> van hoi tiep toi khi FULFILLED
+    if (!['PENDING', 'PAID'].includes(o?.status)) return undefined;
     const t = setInterval(() => order.reload(true), 3000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps

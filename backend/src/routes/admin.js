@@ -31,7 +31,8 @@ router.patch('/campaigns/:id/reject', ah(async (req, res) => res.json(await camp
 // Chay ngay tac vu ra soat trang thai (binh thuong 5 phut / lan)
 router.post('/jobs/campaign-transitions', ah(async (_req, res) => {
   const cancelled = await orders.cancelExpiredOrders();
-  res.json({ ...(await campaigns.runStatusTransitions()), cancelledOrders: cancelled });
+  const escalatedRefunds = await refunds.escalateStaleRefunds();
+  res.json({ ...(await campaigns.runStatusTransitions()), cancelledOrders: cancelled, escalatedRefunds });
 }));
 
 // ---------- Hoa hong, doi soat (UC-05) ----------
@@ -74,7 +75,9 @@ router.post('/categories', ah(async (req, res) => {
   res.status(201).json(await Category.create({ name: req.body.name.trim(), icon: req.body.icon, displayOrder: Number(req.body.displayOrder) || 0 }));
 }));
 router.patch('/categories/:id', ah(async (req, res) => {
-  const c = await Category.findByIdAndUpdate(req.params.id, { name: req.body.name, icon: req.body.icon, displayOrder: req.body.displayOrder }, { new: true, omitUndefined: true }).catch(() => null);
+  if (req.body.name !== undefined && !String(req.body.name).trim()) throw badRequest('Tên danh mục không được trống.');
+  const name = req.body.name === undefined ? undefined : String(req.body.name).trim();
+  const c = await Category.findByIdAndUpdate(req.params.id, { name, icon: req.body.icon, displayOrder: req.body.displayOrder }, { new: true, omitUndefined: true }).catch(() => null);
   if (!c) throw notFound();
   res.json(c);
 }));

@@ -24,28 +24,45 @@ function refundableUntil(paidAt, voucherExpireAt, windowDays = 7, minDaysBeforeE
 
 // ---------- Chien dich ----------
 
-// FR-CAMP-12: truong gia tri bat buoc theo loai voucher
+const money = (v) => `${Number(v).toLocaleString('vi-VN')} ₫`;
+const positiveInt = (v) => Number.isInteger(Number(v)) && Number(v) > 0 && v !== null && v !== '';
+
+// Gia tri toi da khach nhan duoc tu ma giam gia: giam theo so tien -> so tien giam; theo % -> muc giam toi da.
+// Day chinh la "gia tri voucher" (faceValue) cua loai DISCOUNT, he thong tu tinh, chu thuong hieu khong nhap tay.
+const discountMaxValue = (c) => Number(c.discountType === DiscountType.PERCENT ? c.maxDiscount : c.discountValue);
+
+// FR-CAMP-12: truong gia tri bat buoc theo loai voucher. Nguyen tac chung: khach tra it hon gia tri nhan duoc.
 function validateValueFields(c) {
   const salePrice = Number(c.salePrice);
   const faceValue = Number(c.faceValue);
   if (!Number.isInteger(salePrice) || salePrice < 1) throw badRequest('Giá bán phải là số nguyên lớn hơn 0.');
-  if (!Number.isFinite(faceValue) || faceValue < 0) throw badRequest('Giá trị voucher không hợp lệ.');
   if (!Object.values(VoucherType).includes(c.voucherType)) throw badRequest('Loại voucher không hợp lệ.');
   if (c.voucherType === VoucherType.DISCOUNT) {
-    if (!c.discountType || !Number(c.discountValue)) {
-      throw badRequest('Mã giảm giá cần kiểu giảm (số tiền / phần trăm) và giá trị giảm.');
+    if (!Object.values(DiscountType).includes(c.discountType) || !positiveInt(c.discountValue)) {
+      throw badRequest('Mã giảm giá cần kiểu giảm (số tiền / phần trăm) và giá trị giảm là số nguyên lớn hơn 0.');
     }
-    if (c.discountType === DiscountType.PERCENT && (Number(c.discountValue) > 100 || !Number(c.maxDiscount))) {
-      throw badRequest('Giảm theo phần trăm cần giá trị từ 1 đến 100 và mức giảm tối đa.');
+    if (c.discountType === DiscountType.PERCENT) {
+      if (Number(c.discountValue) > 100) throw badRequest('Phần trăm giảm phải từ 1 đến 100.');
+      if (!positiveInt(c.maxDiscount)) throw badRequest('Giảm theo phần trăm cần mức giảm tối đa là số nguyên lớn hơn 0.');
+    }
+    if (discountMaxValue(c) <= salePrice) {
+      throw badRequest(c.discountType === DiscountType.PERCENT
+        ? `Mức giảm tối đa (${money(c.maxDiscount)}) phải lớn hơn giá bán (${money(salePrice)}), nếu không khách mua mã sẽ bị lỗ.`
+        : `Số tiền giảm (${money(c.discountValue)}) phải lớn hơn giá bán (${money(salePrice)}), nếu không khách mua mã sẽ bị lỗ.`);
+    }
+  } else {
+    if (!Number.isInteger(faceValue) || faceValue < 1) throw badRequest('Giá trị voucher phải là số nguyên lớn hơn 0.');
+    if (faceValue <= salePrice) {
+      throw badRequest(c.voucherType === VoucherType.PREPAID
+        ? `Mệnh giá (${money(faceValue)}) phải lớn hơn giá bán (${money(salePrice)}).`
+        : `Giá niêm yết của gói (${money(faceValue)}) phải lớn hơn giá bán (${money(salePrice)}).`);
     }
   }
-  if (c.voucherType === VoucherType.PREPAID && faceValue <= salePrice) {
-    throw badRequest('Voucher mệnh giá phải có giá trị lớn hơn giá bán.');
-  }
-  if (c.voucherType === VoucherType.COMBO && !c.comboItems) throw badRequest('Combo cần mô tả nội dung gói.');
-  if (!Number.isInteger(Number(c.totalQuantity)) || Number(c.totalQuantity) < 1) throw badRequest('Số lượng phát hành phải lớn hơn 0.');
-  if (c.limitPerUser !== undefined && (!Number.isInteger(Number(c.limitPerUser)) || Number(c.limitPerUser) < 1)) {
-    throw badRequest('Giới hạn mua mỗi người phải lớn hơn 0.');
+  if (c.voucherType === VoucherType.COMBO && !String(c.comboItems || '').trim()) throw badRequest('Combo cần mô tả nội dung gói.');
+  if (!positiveInt(c.totalQuantity)) throw badRequest('Số lượng phát hành phải là số nguyên lớn hơn 0.');
+  if (c.limitPerUser !== undefined && c.limitPerUser !== null) {
+    if (!positiveInt(c.limitPerUser)) throw badRequest('Giới hạn mua mỗi người phải là số nguyên lớn hơn 0.');
+    if (Number(c.limitPerUser) > Number(c.totalQuantity)) throw badRequest('Giới hạn mua mỗi người không được lớn hơn số lượng phát hành.');
   }
 }
 
@@ -180,7 +197,7 @@ function validateCommissionRate(rate) {
 
 module.exports = {
   remainingPurchaseQuota, availableStock, isOnSale, refundableUntil,
-  validateValueFields, validateTimeline, discountPercent, MIN_EXPIRE_DAYS_AFTER_SALE_END,
+  discountMaxValue, validateValueFields, validateTimeline, discountPercent, MIN_EXPIRE_DAYS_AFTER_SALE_END,
   usageBlock, billRequired,
   OPEN_REFUND_STATUSES, refundEligibility, statusAfterFailedRefund,
   WALLET_STATUS_LABELS, walletPlacement,

@@ -1,7 +1,7 @@
 const { Campaign, Brand, Store, VoucherItem } = require('../models');
-const { CampaignStatus, BrandStatus } = require('../utils/enums');
+const { CampaignStatus, BrandStatus, VoucherType, DiscountType } = require('../utils/enums');
 const { badRequest, notFound } = require('../utils/errors');
-const { validateValueFields, validateTimeline, foldVietnamese, availableStock } = require('./rules');
+const { validateValueFields, validateTimeline, foldVietnamese, availableStock, discountMaxValue } = require('./rules');
 const notifications = require('./notification');
 
 const AVAILABLE = { $subtract: [{ $subtract: ['$totalQuantity', '$soldQuantity'] }, '$reservedQuantity'] };
@@ -32,6 +32,23 @@ async function assertStores(brandId, storeIds) {
   if (count !== new Set(storeIds.map(String)).size) throw badRequest('Chi nhánh áp dụng phải thuộc thương hiệu của bạn.');
 }
 
+// Loai DISCOUNT: gia tri voucher = so tien giam / muc giam toi da (khong nhap tay); loai khac: bo cac truong giam gia
+function normalizeValueFields(data, merged = data) {
+  if (merged.voucherType !== VoucherType.DISCOUNT) {
+    Object.assign(data, { discountType: null, discountValue: null, maxDiscount: null });
+    return;
+  }
+  if (merged.discountType === DiscountType.AMOUNT) data.maxDiscount = null;
+  data.faceValue = discountMaxValue({ ...merged, ...data });
+}
+
+// Ngay ket thuc ban da qua thi chien dich khong bao gio ban duoc
+function assertSaleNotOver(c) {
+  if (new Date(c.saleEndAt).getTime() <= Date.now()) {
+    throw badRequest('Ngày kết thúc bán đã qua nên chiến dịch không thể bán được. Hãy chọn ngày kết thúc bán trong tương lai.');
+  }
+}
+
 async function searchTextFor(title, brandId) {
   const brand = await Brand.findById(brandId).select('name');
   return foldVietnamese(`${title} ${brand?.name ?? ''}`);
@@ -41,12 +58,14 @@ async function searchTextFor(title, brandId) {
 async function create(brandId, body) {
   const data = pick(body);
   if (!data.title?.trim()) throw badRequest('Vui lòng nhập tiêu đề chiến dịch.');
-  if (data.voucherType !== 'DISCOUNT') Object.assign(data, { discountType: null, discountValue: null, maxDiscount: null });
+  data.limitPerUser = data.limitPerUser || 5;
+  normalizeValueFields(data);
   validateValueFields(data);
   validateTimeline(data);
+  assertSaleNotOver(data);
   await assertStores(brandId, data.storeIds);
   return Campaign.create({
-    ...data, brandId, limitPerUser: data.limitPerUser || 5, status: CampaignStatus.DRAFT,
+    ...data, brandId, status: CampaignStatus.DRAFT,
     searchText: await searchTextFor(data.title, brandId),
   });
 }
@@ -64,6 +83,10 @@ async function update(id, body) {
   }
   if (campaign.status === CampaignStatus.ENDED) throw badRequest('Chiến dịch đã kết thúc, không thể sửa.');
   const data = pick(body);
+  // Tinh lai gia tri cua ma giam gia chi khi co sua cac truong gia tri (truoc buoc khoa BR-17 de khoa bat duoc thay doi)
+  if (['voucherType', 'discountType', 'discountValue', 'maxDiscount', 'faceValue'].some((k) => data[k] !== undefined)) {
+    normalizeValueFields(data, { ...campaign.toObject(), ...data });
+  }
   if (campaign.soldQuantity > 0) {
     for (const f of LOCKED_WHEN_SOLD) {
       if (data[f] === undefined) continue;
@@ -79,9 +102,9 @@ async function update(id, body) {
     throw badRequest('Số lượng phát hành không được nhỏ hơn số đã bán và đang giữ chỗ.');
   }
   const merged = { ...campaign.toObject(), ...data };
-  if (merged.voucherType !== 'DISCOUNT') Object.assign(data, { discountType: null, discountValue: null, maxDiscount: null });
-  validateValueFields({ ...merged, ...data });
+  validateValueFields(merged);
   validateTimeline(merged);
+  assertSaleNotOver(merged);
   if (data.storeIds) await assertStores(campaign.brandId, data.storeIds);
   Object.assign(campaign, data);
   campaign.searchText = await searchTextFor(campaign.title, campaign.brandId);
@@ -102,6 +125,7 @@ async function submit(id) {
   }
   validateValueFields(campaign);
   validateTimeline(campaign);
+  assertSaleNotOver(campaign);
   campaign.status = CampaignStatus.PENDING;
   campaign.submittedAt = new Date();
   campaign.rejectReason = null;

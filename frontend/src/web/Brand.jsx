@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { webApi } from '../api/client';
 import { Badge, Empty, ErrorBox, PromptDialog, Spinner, StatusBadge, useAction, useLoad, useToast } from '../components/ui';
 import { BRAND_STATUS, CAMPAIGN_STATUS, date, dateTime, money, toLocalInput, VOUCHER_TYPES } from '../utils/format';
+import { valueText } from '../customer/Campaign';
 
 export const BrandContext = createContext({ brand: null });
 const useBrand = () => useContext(BrandContext);
@@ -34,7 +35,7 @@ export function BrandCampaigns() {
           <div className="row between gap">
             <div className="grow">
               <div className="row gap"><span className="bold" style={{ fontSize: 15 }}>{c.title}</span><StatusBadge map={CAMPAIGN_STATUS} value={c.status} /></div>
-              <div className="small muted">{VOUCHER_TYPES[c.voucherType]} · Giá bán {money(c.salePrice)} · Giá trị {money(c.faceValue)} · Đã bán {c.soldQuantity}/{c.totalQuantity} · Còn {c.availableQuantity} · Tối đa {c.limitPerUser}/người</div>
+              <div className="small muted">{VOUCHER_TYPES[c.voucherType]} · Giá bán {money(c.salePrice)} · {valueText(c)} · Đã bán {c.soldQuantity}/{c.totalQuantity} · Còn {c.availableQuantity} · Tối đa {c.limitPerUser}/người</div>
               <div className="small muted">Bán {date(c.saleStartAt)} – {date(c.saleEndAt)} · HSD {date(c.voucherExpireAt)} · Chi nhánh: {c.stores.map((s) => s.name).join(', ')}</div>
               {c.rejectReason && c.status === 'DRAFT' && <div className="alert alert-bad small">Bị từ chối: {c.rejectReason}</div>}
             </div>
@@ -60,6 +61,21 @@ const EMPTY = {
   discountType: 'PERCENT', discountValue: '', maxDiscount: '', comboItems: '', totalQuantity: 100, limitPerUser: 5,
   saleStartAt: '', saleEndAt: '', voucherExpireAt: '', storeIds: [],
 };
+
+// Gia tri khach nhan duoc: ma giam gia = so tien giam / muc giam toi da; loai khac = menh gia / gia niem yet
+const valueOf = (f) => Number(f.voucherType !== 'DISCOUNT' ? f.faceValue : f.discountType === 'PERCENT' ? f.maxDiscount : f.discountValue) || 0;
+
+// Kiem tra ngay tren form (may chu van kiem tra lai): khach phai tra it hon gia tri nhan duoc
+function valueProblem(f) {
+  const price = Number(f.salePrice);
+  if (!price) return null;
+  if (f.voucherType === 'DISCOUNT' && f.discountType === 'PERCENT' && Number(f.discountValue) > 100) return 'Phần trăm giảm phải từ 1 đến 100.';
+  if (!valueOf(f)) return null;
+  if (valueOf(f) > price) return null;
+  if (f.voucherType === 'PREPAID') return `Mệnh giá phải lớn hơn giá bán ${money(price)}.`;
+  if (f.voucherType === 'COMBO') return `Giá niêm yết của gói phải lớn hơn giá bán ${money(price)}.`;
+  return `${f.discountType === 'PERCENT' ? 'Mức giảm tối đa' : 'Số tiền giảm'} phải lớn hơn giá bán ${money(price)}, nếu không khách mua mã sẽ bị lỗ.`;
+}
 
 export function CampaignForm() {
   const { id } = useParams();
@@ -90,6 +106,7 @@ export function CampaignForm() {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (!locked && valueProblem(form)) return toast(valueProblem(form), 'bad');
     const body = {
       ...form,
       saleStartAt: form.saleStartAt ? new Date(form.saleStartAt).toISOString() : '',
@@ -97,6 +114,7 @@ export function CampaignForm() {
       voucherExpireAt: form.voucherExpireAt ? new Date(form.voucherExpireAt).toISOString() : '',
     };
     for (const k of ['id', 'status', 'stores', 'brand', 'availableQuantity', 'soldQuantity', 'reservedQuantity', 'brandId', 'createdAt', 'updatedAt', 'searchText', 'approvedAt', 'approvedBy', 'submittedAt', 'rejectReason']) delete body[k];
+    if (form.voucherType === 'DISCOUNT') delete body.faceValue; // may chu tu tinh
     if (locked) ['salePrice', 'faceValue', 'voucherType', 'discountType', 'discountValue', 'maxDiscount', 'voucherExpireAt'].forEach((k) => delete body[k]);
     const r = await run(() => (id ? webApi.patch(`/brand/${brand.id}/campaigns/${id}`, body) : webApi.post(`/brand/${brand.id}/campaigns`, body)),
       id ? (['APPROVED', 'PUBLISHED', 'SOLD_OUT', 'PAUSED'].includes(form.status) ? 'Đã lưu. Chiến dịch chuyển sang chờ duyệt lại.' : 'Đã lưu chiến dịch.') : 'Đã lưu nháp.');
@@ -125,9 +143,17 @@ export function CampaignForm() {
       <div className="card">
         <div className="card-title">Giá và số lượng</div>
         <div className="grid2">
-          <label className="field"><span>Giá bán (VND) *</span><input type="number" min="1" required disabled={locked} value={form.salePrice} onChange={set('salePrice')} /></label>
-          <label className="field"><span>Giá trị voucher (VND) *</span><input type="number" min="0" required disabled={locked} value={form.faceValue} onChange={set('faceValue')} /></label>
+          <label className="field"><span>Giá bán (VND) *</span><input type="number" min="1" step="1" required disabled={locked} value={form.salePrice} onChange={set('salePrice')} /></label>
+          {form.voucherType === 'DISCOUNT' ? (
+            <div className="field"><span>Giá trị voucher</span>
+              <div className="input muted" style={{ background: 'var(--bg, #f4f7f6)' }}>{valueOf(form) > 0 ? `${money(valueOf(form))} (tự tính)` : 'Tự tính từ mức giảm bên dưới'}</div>
+            </div>
+          ) : (
+            <label className="field"><span>{form.voucherType === 'PREPAID' ? 'Mệnh giá voucher (VND) *' : 'Giá niêm yết của gói (VND) *'}</span>
+              <input type="number" min="1" step="1" required disabled={locked} value={form.faceValue} onChange={set('faceValue')} /></label>
+          )}
         </div>
+        {!locked && valueProblem(form) && <div className="alert alert-bad small">{valueProblem(form)}</div>}
         {form.voucherType === 'DISCOUNT' && (
           <div className="grid3">
             <label className="field"><span>Kiểu giảm *</span>
@@ -228,6 +254,7 @@ export function BrandStaff() {
   const stores = useLoad(() => webApi.get(`/brand/${brand.id}/stores`), [brand.id]);
   const [form, setForm] = useState({ email: '', fullName: '', storeId: '' });
   const [link, setLink] = useState(null);
+  const [confirmOff, setConfirmOff] = useState(null);
   const [busy, run] = useAction();
   const add = async (e) => {
     e.preventDefault();
@@ -237,6 +264,7 @@ export function BrandStaff() {
   const deactivate = async (a) => {
     const r = await run(() => webApi.patch(`/brand/${brand.id}/staff/${a.id}/deactivate`), 'Đã vô hiệu hóa nhân viên và thu hồi phiên đăng nhập.');
     if (r) list.reload(true);
+    setConfirmOff(null);
   };
   return (
     <div>
@@ -263,11 +291,15 @@ export function BrandStaff() {
               <td>{a.storeName}</td>
               <td className="small">{date(a.assignedAt)}</td>
               <td><Badge tone={a.active ? (a.userStatus === 'ACTIVE' ? 'ok' : 'warn') : 'gray'}>{a.active ? (a.userStatus === 'ACTIVE' ? 'Hoạt động' : 'Chờ kích hoạt') : 'Vô hiệu'}</Badge></td>
-              <td>{a.active && <button type="button" className="link small" disabled={busy} onClick={() => deactivate(a)}>Vô hiệu hóa</button>}</td>
+              <td>{a.active && <button type="button" className="link small" disabled={busy} onClick={() => setConfirmOff(a)}>Vô hiệu hóa</button>}</td>
             </tr>
           ))}</tbody>
         </table>
       )}
+      <ErrorBox error={list.error} onRetry={list.reload} />
+      <PromptDialog open={!!confirmOff} title={`Vô hiệu hóa ${confirmOff?.email}`} required={false} confirmText="Vô hiệu hóa"
+        message="Tài khoản bị khóa ở tất cả chi nhánh và bị đăng xuất ngay. Muốn dùng lại phải gán lại và kích hoạt lại qua email."
+        onClose={() => setConfirmOff(null)} onConfirm={() => deactivate(confirmOff)} />
     </div>
   );
 }

@@ -69,6 +69,15 @@ async function createOrder(userId, { campaignId, quantity }, { ipAddress } = {})
     paymentOrderCode: newPaymentOrderCode(),
     reservedUntil: new Date(Date.now() + int('ORDER_RESERVATION_TTL_MINUTES', 15) * 60000),
   });
+  // BR-01 khi gui nhieu request cung luc (2 tab, bam nhanh, trinh duyet gui lai): cac request deu qua buoc kiem tra
+  // han muc o tren truoc khi don nao duoc tao -> kiem tra lai sau khi tao, vuot thi huy chinh don nay va nha ton kho
+  const recheck = await issuedAndPending(userId, campaign._id);
+  if (recheck.issued + recheck.pendingQty > campaign.limitPerUser) {
+    const undone = await Order.findOneAndUpdate({ _id: order._id, status: OrderStatus.PENDING }, { status: OrderStatus.CANCELLED, cancelledAt: new Date() });
+    if (undone) await releaseReservation(undone);
+    const remaining = rules.remainingPurchaseQuota(campaign.limitPerUser, recheck.issued, recheck.pendingQty - q);
+    throw badRequest(`Bạn chỉ còn được mua tối đa ${remaining} voucher cho chiến dịch này.`, 'PURCHASE_LIMIT', { limitPerUser: campaign.limitPerUser, remaining });
+  }
   await notifications.orderCreated(userId, order._id, campaign.title);
   return { order: await present(order), paymentUrl: await ensurePaymentLink(order, ipAddress) };
 }

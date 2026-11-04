@@ -1,8 +1,8 @@
-const { Campaign, Brand, Store, Category, Review, User, Favorite } = require('../models');
-const { CampaignStatus, BrandStatus, ReviewStatus } = require('../utils/enums');
+const { Campaign, Brand, Store, Category, Review, User, Favorite, VoucherItem, Order } = require('../models');
+const { CampaignStatus, BrandStatus, ReviewStatus, OrderStatus } = require('../utils/enums');
 const { badRequest, notFound } = require('../utils/errors');
 const { int } = require('../config/env');
-const { availableStock, discountPercent, foldVietnamese, distanceKm } = require('./rules');
+const { availableStock, discountPercent, foldVietnamese, distanceKm, remainingPurchaseQuota } = require('./rules');
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -121,10 +121,20 @@ async function detail(id, { lat, lng } = {}, userId = null) {
   const users = await User.find({ _id: { $in: reviews.map((r) => r.userId) } }).select('fullName email');
   const userById = new Map(users.map((u) => [String(u._id), u]));
   const favorited = userId ? !!(await Favorite.exists({ userId, targetType: 'CAMPAIGN', targetId: campaign._id })) : false;
+  // BR-01: so voucher khach con duoc mua (tru voucher da mua va don dang giu cho) de man checkout gioi han dung ngay tu dau
+  let myRemainingQuota = null;
+  if (userId) {
+    const [issued, pending] = await Promise.all([
+      VoucherItem.countDocuments({ userId, campaignId: campaign._id }),
+      Order.find({ userId, campaignId: campaign._id, status: OrderStatus.PENDING, reservedUntil: { $gt: new Date() } }).select('quantity'),
+    ]);
+    myRemainingQuota = remainingPurchaseQuota(campaign.limitPerUser, issued, pending.reduce((s, o) => s + o.quantity, 0));
+  }
   return {
     ...present(campaign, brand),
     stores,
     favorited,
+    myRemainingQuota,
     refundPolicy: {
       windowDays: int('REFUND_WINDOW_DAYS', 7), minDaysBeforeExpiry: int('REFUND_MIN_DAYS_BEFORE_EXPIRE', 3),
       description: 'Voucher chưa sử dụng được yêu cầu hoàn trước mốc sớm hơn giữa 7 ngày kể từ thanh toán và 3 ngày trước hạn sử dụng.',

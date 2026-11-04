@@ -224,6 +224,17 @@ async function confirmMismatch(orderId, actorUserId, gatewayRefundId) {
   return { message: 'Đã ghi nhận hoàn tiền cho đơn lệch số tiền.', amount: total };
 }
 
+// Yeu cau dung o PROCESSING (dang goi cong) / REQUESTED (dang chot ket qua) qua lau nghia la may chu da dung giua chung:
+// dua vao hang doi hoan thu cong (UC-07) de quan tri vien xu ly, khong de voucher bi khoa REFUND_PENDING ma khong ai thay
+const STALE_REFUND_MINUTES = 10;
+async function escalateStaleRefunds(now = new Date()) {
+  const r = await RefundRequest.updateMany(
+    { status: { $in: [RefundRequestStatus.PROCESSING, RefundRequestStatus.REQUESTED] }, updatedAt: { $lt: new Date(now.getTime() - STALE_REFUND_MINUTES * 60000) } },
+    { status: RefundRequestStatus.MANUAL_PENDING },
+  );
+  return r.modifiedCount;
+}
+
 // ================= Danh sach =================
 async function toView(r) {
   const item = await VoucherItem.findById(r.voucherItemId);
@@ -262,5 +273,5 @@ async function findManualPending() {
 
 module.exports = {
   REFUND_STATUS_LABELS, requestRefund, confirmManualRefund, failManualRefund, paymentMismatches, confirmMismatch,
-  findMine, findManualPending,
+  findMine, findManualPending, escalateStaleRefunds,
 };

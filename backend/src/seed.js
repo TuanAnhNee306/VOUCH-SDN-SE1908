@@ -104,7 +104,7 @@ async function seed() {
   }, ['hlLeLoi']);
   await campaign('hlDiscount', 'highlands', {
     categoryId: cat.cafe._id, title: 'Giảm 20% Phindi', voucherType: 'DISCOUNT', discountType: 'PERCENT', discountValue: 20, maxDiscount: 15000,
-    salePrice: 10000, faceValue: 50000, totalQuantity: 300, limitPerUser: 3, status: 'PENDING', submittedAt: vn(-1, '09:00'), ...sale(0, 150, 90),
+    salePrice: 10000, faceValue: 15000, totalQuantity: 300, limitPerUser: 3, status: 'PENDING', submittedAt: vn(-1, '09:00'), ...sale(0, 150, 90),
   }, ['hlNguyenHue']);
 
   // --- Phuc Long ---
@@ -116,7 +116,7 @@ async function seed() {
   await campaign('plDiscount', 'phuclong', {
     categoryId: cat.cafe._id, title: 'Giảm 30% toàn bộ menu trà', voucherType: 'DISCOUNT', discountType: 'PERCENT', discountValue: 30, maxDiscount: 30000,
     description: 'Giảm 30% cho hóa đơn trà bất kỳ', terms: 'Không áp dụng cùng chương trình khuyến mãi khác',
-    salePrice: 15000, faceValue: 100000, totalQuantity: 200, soldQuantity: 198, limitPerUser: 2, status: 'PUBLISHED', ...sale(-30, 90, 45),
+    salePrice: 15000, faceValue: 30000, totalQuantity: 200, soldQuantity: 198, limitPerUser: 2, status: 'PUBLISHED', ...sale(-30, 90, 45),
   }, ['plLeVanSy', 'plPhanXichLong']);
   await campaign('plPrepaid', 'phuclong', {
     categoryId: cat.cafe._id, title: 'Phiếu 200.000đ dùng tại Phúc Long', voucherType: 'PREPAID', description: 'Dùng cho mọi đồ uống và bánh tại Phúc Long',
@@ -145,7 +145,7 @@ async function seed() {
   }, ['gdNguyenTrai', 'gdBaTrieu', 'gdCrescent']);
   await campaign('gdDiscount', 'guardian', {
     categoryId: cat.beauty._id, title: 'Giảm 25% sản phẩm chăm sóc da', voucherType: 'DISCOUNT', discountType: 'PERCENT', discountValue: 25, maxDiscount: 50000,
-    description: 'Giảm 25% nhóm hàng chăm sóc da', terms: 'Mỗi hóa đơn dùng tối đa một voucher', salePrice: 12000, faceValue: 80000, totalQuantity: 250, soldQuantity: 11, limitPerUser: 2, status: 'PAUSED', ...sale(-15, 80, 30),
+    description: 'Giảm 25% nhóm hàng chăm sóc da', terms: 'Mỗi hóa đơn dùng tối đa một voucher', salePrice: 12000, faceValue: 50000, totalQuantity: 250, soldQuantity: 11, limitPerUser: 2, status: 'PAUSED', ...sale(-15, 80, 30),
   }, ['gdNguyenTrai', 'gdCrescent']);
   await campaign('gdCombo', 'guardian', {
     categoryId: cat.beauty._id, title: 'Combo sữa rửa mặt và kem chống nắng', voucherType: 'COMBO', comboItems: '1 sữa rửa mặt 100ml, 1 kem chống nắng SPF50',
@@ -159,7 +159,7 @@ async function seed() {
   }, ['cgvDongKhoi', 'cgvNguyenChiThanh']);
   await campaign('cgvDiscount', 'cgv', {
     categoryId: cat.movie._id, title: 'Giảm 40% vé xem phim ngày thường', voucherType: 'DISCOUNT', discountType: 'PERCENT', discountValue: 40, maxDiscount: 60000,
-    description: 'Áp dụng từ thứ Hai đến thứ Sáu', terms: 'Không áp dụng ngày lễ, tết và suất chiếu sớm', salePrice: 10000, faceValue: 120000, totalQuantity: 1000, limitPerUser: 4,
+    description: 'Áp dụng từ thứ Hai đến thứ Sáu', terms: 'Không áp dụng ngày lễ, tết và suất chiếu sớm', salePrice: 10000, faceValue: 60000, totalQuantity: 1000, limitPerUser: 4,
     status: 'PENDING', submittedAt: vn(-1, '09:30'), ...sale(5, 95, 40),
   }, ['cgvDongKhoi', 'cgvNguyenChiThanh']);
   await campaign('cgvPrepaid', 'cgv', {

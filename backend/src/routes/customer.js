@@ -121,7 +121,12 @@ router.post('/favorites', customer, ah(async (req, res) => {
   if (!(await Model.exists({ _id: targetId }).catch(() => null))) throw notFound();
   const removed = await Favorite.findOneAndDelete({ userId: req.user.userId, targetType, targetId });
   if (removed) return res.json({ favorited: false });
-  await Favorite.create({ userId: req.user.userId, targetType, targetId });
+  try {
+    await Favorite.create({ userId: req.user.userId, targetType, targetId });
+  } catch (e) {
+    // Bam nhanh hai lan: request kia vua tao xong -> van la "da yeu thich", khong tra loi 500
+    if (e.code !== 11000) throw e;
+  }
   return res.json({ favorited: true });
 }));
 router.get('/favorites', customer, ah(async (req, res) => {

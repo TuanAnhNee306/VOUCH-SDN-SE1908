@@ -42,7 +42,10 @@ export function VoucherCard({ c, onClick }) {
         )}
         <div>
           <span className="price" style={{ fontSize: 15 }}>{money(c.salePrice)}</span>
-          {c.faceValue > c.salePrice && <span className="small strike" style={{ marginLeft: 6 }}>{money(c.faceValue)}</span>}
+          {/* Ma giam gia khong co "gia goc": hien muc giam toi da thay vi gach ngang */}
+          {c.voucherType === 'DISCOUNT'
+            ? c.faceValue > c.salePrice && <span className="small muted" style={{ marginLeft: 6 }}>giảm đến {money(c.faceValue)}</span>
+            : c.faceValue > c.salePrice && <span className="small strike" style={{ marginLeft: 6 }}>{money(c.faceValue)}</span>}
         </div>
         <div className="small muted">🔥 Đã bán {c.soldQuantity}{c.distanceKm != null ? ` · ${km(c.distanceKm)}` : ''}</div>
       </div>

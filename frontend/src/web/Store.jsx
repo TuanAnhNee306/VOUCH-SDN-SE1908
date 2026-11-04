@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { webApi, useSession } from '../api/client';
 import { Empty, ErrorBox, PromptDialog, Spinner, useAction, useLoad } from '../components/ui';
 import { dateTime, money } from '../utils/format';
+import { valueText } from '../customer/Campaign';
 
 // FR-AUTH-12: chon chi nhanh lam viec dau ca (luu vao phien)
 export function StoreSelect() {
@@ -81,6 +82,8 @@ function ResultBanner({ result, onNext }) {
         <div style={{ fontSize: 34 }}>✓</div>
         <h2>HỢP LỆ</h2>
         <div className="bold">{r.campaign.title}</div>
+        <div className="bold" style={{ fontSize: 15 }}>{valueText(r.campaign)}</div>
+        {r.campaign.terms && <div className="small">Điều kiện: {r.campaign.terms}</div>}
         <div className="small">Mã voucher: {r.voucherCode}</div>
         <div className="small">Xác nhận lúc {dateTime(r.redeemedAt)} · {r.method === 'QR' ? 'Mã QR' : 'Mã OTP'}</div>
         {r.billAmount != null && <div className="small">Hóa đơn: {money(r.billAmount)}</div>}

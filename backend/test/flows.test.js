@@ -627,3 +627,120 @@ test('Chien dich: khong duyet khi thuong hieu bi dinh chi; da duyet ma qua han b
   await campaigns.runStatusTransitions(new Date(now + 6 * 864e5), draft.id);
   assert.equal((await M.Campaign.findById(draft.id)).status, 'ENDED');
 });
+
+test('BR-01: nhieu request mua cung luc cua mot khach khong vuot gioi han moi nguoi, ton kho khop', async () => {
+  const token = await otpLogin('khach-songsong@voucher.local');
+  const c = await campaignByTitle('Trà sữa Phúc Long mua 1 tặng 1');
+  const reservedBefore = (await M.Campaign.findById(c._id)).reservedQuantity;
+  const results = await Promise.all([1, 2, 3, 4].map(() => api('POST', '/orders', { campaignId: String(c._id), quantity: 3 }, token)));
+  for (const r of results) assert.ok(r.status === 201 || r.body.code === 'PURCHASE_LIMIT', JSON.stringify(r.body));
+  const user = await M.User.findOne({ email: 'khach-songsong@voucher.local' });
+  const pending = await M.Order.find({ userId: user._id, campaignId: c._id, status: 'PENDING' });
+  const held = pending.reduce((s, o) => s + o.quantity, 0);
+  assert.ok(held <= c.limitPerUser, `dang giu ${held} > gioi han ${c.limitPerUser}`);
+  // Don bi huy do vuot han muc phai tra lai ton kho: so giu cho tang dung bang so dang giu cua cac don con PENDING
+  assert.equal((await M.Campaign.findById(c._id)).reservedQuantity, reservedBefore + held);
+  for (const o of pending) await api('POST', `/orders/${o._id}/simulate-payment`, { result: 'failed' }, token);
+});
+
+test('Hoan tien bi treo (may chu dung giua chung) duoc dua vao hang doi quan tri, xu ly tiep duoc', async () => {
+  await api('PUT', '/admin/refund-sandbox', { mode: 'success' }, admin);
+  const v = await buyOne(await otpLogin('khach-treo@voucher.local'), 'Cặp vé xem phim 2D cuối tuần');
+  await M.VoucherItem.updateOne({ _id: v.id }, { status: 'REFUND_PENDING' });
+  const stuck = await M.RefundRequest.create({ voucherItemId: v.id, userId: v.userId, status: 'PROCESSING', amount: v.unitPrice });
+  const refunds = require('../src/services/refund');
+  assert.equal(await refunds.escalateStaleRefunds(), 0, 'chua qua 10 phut thi chua dua vao hang doi');
+  await M.RefundRequest.collection.updateOne({ _id: stuck._id }, { $set: { updatedAt: new Date(Date.now() - 11 * 60000) } });
+  const job = await api('POST', '/admin/jobs/campaign-transitions', undefined, admin);
+  assert.equal(job.body.escalatedRefunds, 1);
+  const queue = await api('GET', '/admin/refunds/manual-pending', undefined, admin);
+  assert.ok(queue.body.some((x) => x.id === String(stuck._id)));
+  const done = await api('PATCH', `/admin/refunds/${stuck._id}/confirm-manual`, { gatewayRefundId: 'MB-STUCK-1' }, admin);
+  assert.equal(done.status, 200, JSON.stringify(done.body));
+  assert.equal((await M.VoucherItem.findById(v.id)).status, 'REFUNDED');
+});
+
+test('Yeu thich bam nhanh hai lan khong loi 500; danh muc khong doi duoc ten rong', async () => {
+  const c = await campaignByTitle('Voucher 100.000đ chỉ 80.000đ');
+  const token = await otpLogin('khach-thich@voucher.local');
+  const both = await Promise.all([1, 2].map(() => api('POST', '/favorites', { targetType: 'CAMPAIGN', targetId: String(c._id) }, token)));
+  for (const r of both) assert.equal(r.status, 200, JSON.stringify(r.body));
+  const cat = (await api('GET', '/admin/categories', undefined, admin)).body[0];
+  const empty = await api('PATCH', `/admin/categories/${cat.id}`, { name: '   ' }, admin);
+  assert.equal(empty.status, 400);
+  assert.equal((await M.Category.findById(cat.id)).name, cat.name);
+});
+
+test('Gia tri voucher: khach luon tra it hon gia tri nhan duoc; ma giam gia tu tinh gia tri; khong tao chien dich da het han ban', async () => {
+  const brand = (await api('GET', '/brand/me', undefined, owner)).body[0];
+  const stores = (await api('GET', `/brand/${brand.id}/stores`, undefined, owner)).body;
+  const now = Date.now();
+  const base = {
+    title: 'Kiểm thử giá', totalQuantity: 50, limitPerUser: 2, storeIds: [stores[0].id],
+    saleStartAt: new Date(now - 3600e3).toISOString(), saleEndAt: new Date(now + 10 * 864e5).toISOString(), voucherExpireAt: new Date(now + 30 * 864e5).toISOString(),
+  };
+  const post = (body) => api('POST', `/brand/${brand.id}/campaigns`, { ...base, ...body }, owner);
+  const bad = async (body, pattern) => {
+    const r = await post(body);
+    assert.equal(r.status, 400, `phai bi chan: ${JSON.stringify(body)}`);
+    assert.match(r.body.message, pattern);
+  };
+
+  // Dung truong hop trong anh: ma giam gia ban 80.000d, "gia tri" 70.000d, chua nhap muc giam
+  await bad({ voucherType: 'DISCOUNT', discountType: 'PERCENT', salePrice: 80000, faceValue: 70000 }, /giá trị giảm/);
+  await bad({ voucherType: 'DISCOUNT', discountType: 'PERCENT', discountValue: 20, maxDiscount: 15000, salePrice: 80000 }, /Mức giảm tối đa .* phải lớn hơn giá bán/);
+  await bad({ voucherType: 'DISCOUNT', discountType: 'AMOUNT', discountValue: 50000, salePrice: 50000 }, /Số tiền giảm .* phải lớn hơn giá bán/);
+  await bad({ voucherType: 'DISCOUNT', discountType: 'PERCENT', discountValue: -5, maxDiscount: 30000, salePrice: 10000 }, /số nguyên lớn hơn 0/);
+  await bad({ voucherType: 'DISCOUNT', discountType: 'PERCENT', discountValue: 150, maxDiscount: 30000, salePrice: 10000 }, /từ 1 đến 100/);
+  await bad({ voucherType: 'DISCOUNT', discountType: 'PERCENT', discountValue: 20, maxDiscount: -1, salePrice: 10000 }, /mức giảm tối đa/);
+  await bad({ voucherType: 'COMBO', comboItems: '1 ly', salePrice: 80000, faceValue: 70000 }, /Giá niêm yết .* phải lớn hơn giá bán/);
+  await bad({ voucherType: 'PREPAID', salePrice: 80000, faceValue: 80000 }, /Mệnh giá .* phải lớn hơn giá bán/);
+  await bad({ voucherType: 'PREPAID', salePrice: 80000, faceValue: 100000, totalQuantity: 3, limitPerUser: 5 }, /không được lớn hơn số lượng phát hành/);
+  await bad({ voucherType: 'PREPAID', salePrice: 80000, faceValue: 100000, saleStartAt: new Date(now - 20 * 864e5).toISOString(), saleEndAt: new Date(now - 864e5).toISOString() }, /đã qua/);
+
+  // Hop le: gia tri cua ma giam gia do he thong tu tinh, bo qua so nhap tay
+  const pct = await post({ voucherType: 'DISCOUNT', discountType: 'PERCENT', discountValue: 20, maxDiscount: 30000, salePrice: 10000, faceValue: 999 });
+  assert.equal(pct.status, 201, JSON.stringify(pct.body));
+  assert.equal(pct.body.faceValue, 30000);
+  const amt = await post({ voucherType: 'DISCOUNT', discountType: 'AMOUNT', discountValue: 50000, maxDiscount: 70000, salePrice: 20000 });
+  assert.equal(amt.body.faceValue, 50000);
+  assert.equal(amt.body.maxDiscount, null);
+  // Doi muc giam -> gia tri cap nhat theo; doi sang menh gia -> xoa truong giam gia
+  const edited = await api('PATCH', `/brand/${brand.id}/campaigns/${pct.body.id}`, { maxDiscount: 40000 }, owner);
+  assert.equal(edited.body.faceValue, 40000);
+  const toPrepaid = await api('PATCH', `/brand/${brand.id}/campaigns/${pct.body.id}`, { voucherType: 'PREPAID', faceValue: 50000 }, owner);
+  assert.equal(toPrepaid.status, 200, JSON.stringify(toPrepaid.body));
+  assert.equal(toPrepaid.body.discountType, null);
+  assert.equal(toPrepaid.body.faceValue, 50000);
+});
+
+test('Checkout biet so voucher khach con duoc mua; nhan vien thay muc giam; voucher menh gia khong nhan hoa don 0d', async () => {
+  const token = await otpLogin('khach-quota@voucher.local');
+  let c = await campaignByTitle('Voucher 100.000đ chỉ 80.000đ');
+  // Test truoc dinh chi roi khoi phuc Highlands: chien dich dang tam dung -> chu thuong hieu mo ban lai
+  if (c.status === 'PAUSED') await api('PATCH', `/brand/${c.brandId}/campaigns/${c._id}/resume`, undefined, owner);
+  c = await campaignByTitle('Voucher 100.000đ chỉ 80.000đ');
+  const guest = await api('GET', `/campaigns/${c._id}`);
+  assert.equal(guest.body.myRemainingQuota, null, JSON.stringify(guest));
+  assert.equal((await api('GET', `/campaigns/${c._id}`, undefined, token)).body.myRemainingQuota, c.limitPerUser);
+  const { body } = await api('POST', '/orders', { campaignId: String(c._id), quantity: 2 }, token);
+  assert.equal((await api('GET', `/campaigns/${c._id}`, undefined, token)).body.myRemainingQuota, c.limitPerUser - 2);
+  await api('POST', `/orders/${body.order.id}/simulate-payment`, {}, token);
+  assert.equal((await api('GET', `/campaigns/${c._id}`, undefined, token)).body.myRemainingQuota, c.limitPerUser - 2);
+
+  const v = await M.VoucherItem.findOne({ orderId: body.order.id });
+  const tok = await api('POST', '/redeem/token', { voucherItemId: String(v._id) }, token);
+  const stores = (await api('GET', '/staff/my-stores', undefined, staff)).body;
+  await api('POST', '/auth/select-store', { storeId: stores.find((s) => c.storeIds.map(String).includes(s.id)).id }, staff);
+  const zero = await api('POST', '/staff/redeem', { otpCode: tok.body.otpCode, billAmount: 0 }, staff);
+  assert.equal(zero.body.code, 'BILL_REQUIRED');
+  const ok = await api('POST', '/staff/redeem', { otpCode: tok.body.otpCode, billAmount: 120000 }, staff);
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  assert.equal(ok.body.campaign.faceValue, 100000);
+  const edit0 = await api('PATCH', `/staff/logs/${ok.body.redemptionLogId}/bill`, { billAmount: 0 }, staff);
+  assert.equal(edit0.body.code, 'BILL_INVALID');
+
+  const discount = await campaignByTitle('Giảm 100.000đ cho hóa đơn từ 500.000đ');
+  const d = await api('GET', `/campaigns/${discount._id}`);
+  assert.ok(d.body.discountValue === 100000 && d.body.faceValue === 100000);
+});

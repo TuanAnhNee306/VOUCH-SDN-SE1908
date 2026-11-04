@@ -3,6 +3,7 @@ const orders = require('../services/order');
 const campaigns = require('../services/campaign');
 const settlements = require('../services/settlement');
 const notifications = require('../services/notification');
+const refunds = require('../services/refund');
 
 const safe = (name, fn) => async () => {
   try {
@@ -19,6 +20,7 @@ function startJobs() {
   // 5 phut / lan: huy don qua 15 phut giu cho (FR-ORDER-03) + ra soat trang thai chien dich (FR-CAMP-10)
   const every5 = safe('ra soat 5 phut', async () => ({
     cancelledOrders: await orders.cancelExpiredOrders(),
+    escalatedRefunds: await refunds.escalateStaleRefunds(),
     ...(await campaigns.runStatusTransitions()),
   }));
   cron.schedule('*/5 * * * *', every5, tz);
