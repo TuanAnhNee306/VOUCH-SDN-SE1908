@@ -5,9 +5,31 @@ const { connectDb, disconnectDb } = require('./config/db');
 const { foldVietnamese } = require('./services/rules');
 
 const PASSWORD = 'Voucher@123';
-// Hosted brand marks are intentionally only used for the demo catalog.  They
-// keep the repository small while making cards recognisable in the UI.
-const logos = (domain) => `https://logo.clearbit.com/${domain}?size=256`;
+// These are committed to frontend/public/brands so the demo does not rely on
+// a third-party logo CDN being online.  Vite copies that directory to /brands.
+const logoFiles = {
+  'katinat.vn': 'katinat.png',
+  'gongcha.com.vn': 'gongcha.png',
+  'tocotocotea.com': 'tocotoco.png',
+  'jollibee.com.vn': 'jollibee.png',
+  'lotteria.vn': 'lotteria.png',
+  'kfcvietnam.com.vn': 'kfc.png',
+  'winmart.vn': 'winmart.png',
+  'bachhoaxanh.com': 'bach-hoa-xanh.png',
+  'watsons.vn': 'watsons.png',
+  'hasaki.vn': 'hasaki.png',
+  'galaxycine.vn': 'galaxy-cinema.png',
+  'lottecinemavn.com': 'lotte-cinema.png',
+  'thecoffeehouse.com': 'the-coffee-house.png',
+  'popeyes.vn': 'popeyes.png',
+  'marukameudon.com.vn': 'marukame-udon.svg',
+  'gogi.com.vn': 'gogi-house.png',
+  'saigonco-op.com.vn': 'coopmart.png',
+  'aeon.com.vn': 'aeon.png',
+  'comem.vn': 'co-mem.png',
+  'bhdstar.vn': 'bhd-star.png',
+};
+const logos = (domain) => `/brands/${logoFiles[domain]}`;
 const catalog = [
   ['Katinat', 'Cà phê & trà', 'katinat.vn', 'Katinat Đồng Khởi', '45 Đồng Khởi, Quận 1, TP.HCM', 'Giảm 25% đồ uống bất kỳ', 15000, 80000],
   ['Gong Cha', 'Cà phê & trà', 'gongcha.com.vn', 'Gong Cha Nguyễn Huệ', '68 Nguyễn Huệ, Quận 1, TP.HCM', 'Mua 1 tặng 1 trà sữa size M', 49000, 98000],
@@ -44,7 +66,13 @@ async function run() {
     let owner = await M.User.findOne({ email: `owner+${slug}@voucher.local` });
     if (!owner) owner = await M.User.create({ email: `owner+${slug}@voucher.local`, fullName: `Chủ ${name}`, role: 'BRAND_OWNER', status: 'ACTIVE', passwordHash: hash });
     let brand = await M.Brand.findOne({ name });
-    if (!brand) { brand = await M.Brand.create({ ownerUserId: owner._id, name, description: `Ưu đãi chính hãng ${name} trên Voucher Platform`, categoryId: categories.get(categoryName)?._id, contactInfo: 'Hotline thương hiệu', logo: logos(domain), status: 'APPROVED', approvedAt: new Date() }); created++; }
+    if (!brand) {
+      brand = await M.Brand.create({ ownerUserId: owner._id, name, description: `Ưu đãi chính hãng ${name} trên Voucher Platform`, categoryId: categories.get(categoryName)?._id, contactInfo: 'Hotline thương hiệu', logo: logos(domain), status: 'APPROVED', approvedAt: new Date() });
+      created++;
+    } else if (brand.logo?.includes('logo.clearbit.com')) {
+      brand.logo = logos(domain);
+      await brand.save();
+    }
     let store = await M.Store.findOne({ brandId: brand._id, name: storeName });
     if (!store) store = await M.Store.create({ brandId: brand._id, name: storeName, address, latitude: 10.77, longitude: 106.69, phone: '1900 0000', openingHours: '08:00 - 22:00', status: true });
     const title = `${deal} - ${name}`;
