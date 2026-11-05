@@ -36,7 +36,19 @@ services:
       - key: PAYMENT_WEBHOOK_SECRET
         generateValue: true
       - key: PAYMENT_SIMULATOR
-        value: "true"
+        value: "false"
+      - key: VNPAY_URL
+        value: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      - key: VNPAY_TMN_CODE
+        sync: false
+      - key: VNPAY_HASH_SECRET
+        sync: false
+      - key: VNPAY_RETURN_URL
+        value: https://vouch-sdn1908-web.onrender.com/payment-return
+      - key: VNPAY_IPN_URL
+        value: https://vouch-sdn1908-api.onrender.com/api/orders/vnpay-ipn
+      - key: VNPAY_VERSION
+        value: 2.1.0
       - key: DEFAULT_COMMISSION_RATE
         value: "0.1"
       - key: MAIL_MODE
