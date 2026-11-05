@@ -1,64 +1,102 @@
-# Trạng thái triển khai Vouch — 05/11/2026
+# Vouch — Kết quả deployment public
+Ngày xác minh: 05/11/2026 (giờ Việt Nam).
 
-## Nguồn và phạm vi
+## URL hoạt động
 
-- Người dùng chọn deploy nhánh `tuananhdone`.
-- Repository được GitHub xác nhận đã đổi tên thành `TuanAnhNee306/VOUCH-SDN-SE1908` (repository ID 1393042777); remote local tên SE1925 chuyển hướng tới cùng repo.
-- Base local/remote trước thay đổi: `143cfe3908afc21d8c7d40b20cacc8624d834272`.
-- Deployment mới dùng 32 voucher demo: 16 DISCOUNT, 16 CASHBACK, 24 thương hiệu và 24 chi nhánh. Không nhập campaign seed cũ, combo hoặc voucher mệnh giá.
-- Nguồn dữ liệu và các bản ghi bị loại: `backend/data/deploy-source-audit.md`. Manifest: `backend/data/deploy-catalog.json`.
+- Customer Marketplace: https://vouch-sdn1908-web.onrender.com
+- Customer login: https://vouch-sdn1908-web.onrender.com/login
+- Management login: https://vouch-sdn1908-web.onrender.com/web/login
+- API health: https://vouch-sdn1908-api.onrender.com/api/health
 
-## Kết quả chuẩn bị
+Đã mở web public trên Chrome, đọc đúng nội dung giảm giá/hoàn tiền và 32 voucher. API trả HTTP 200, database up. Không thay thế hoặc sửa hai service demo cũ.
 
-- Form/API tạo mới chỉ DISCOUNT/CASHBACK; đọc và kiểm thử lịch sử STORED_VALUE vẫn được giữ.
-- Giảm giá kiểm tra hóa đơn tối thiểu, trần giảm, snapshot quyền lợi theo đơn, không tiêu QR khi hóa đơn chưa đủ điều kiện.
-- Production tắt cả hai seed startup, không fallback MongoDB nhúng, không log URI DB khi kết nối lỗi. Kiểm tra signing secrets và URL HTTPS trước khởi động.
-- Render Blueprint: `render.yaml`, backend Free + frontend Static, SPA rewrite và các secret nhập riêng.
-- Gửi mail HTTPS qua Resend (`MAIL_MODE=resend`, `RESEND_API_KEY`, `EMAIL_FROM`); Gmail SMTP local vẫn giữ.
-- Backend: 58 test pass. Frontend: 10 test pass. Frontend production build thành công.
-- Các test importer và business flow chạy trên MongoMemoryServer; email HTTPS dùng mock, chưa xác minh thư thật.
+## Source và hosting
 
-## Service cũ đã kiểm tra read-only
+- Repo: https://github.com/TuanAnhNee306/VOUCH-SDN-SE1908
+- Nhánh: `tuananhdone`.
+- Commit ứng dụng đã deploy: `17722f2` (bao gồm nội dung trang chủ từ `927e53a` và bản chuẩn bị `5803c85`).
+- Blueprint: `exs-dblua656e07s73ah96gg`.
+- Backend Free: `vouch-sdn1908-api`, ID `srv-dbluc956e07s73ahfp60`.
+- Frontend Static Site: `vouch-sdn1908-web`, ID `srv-dbluc956e07s73ahfp40`.
+- Frontend deployment Live đã quan sát: `dep-dbluh508v5cc73cvrdg0`, source `17722f2`.
+- Frontend production asset đã kiểm tra: `/assets/index-DYMTMzUS.js`.
+- Render đã được cập nhật bằng Blueprint Manual sync và frontend Manual Deploy. Không giả định push Git tự động triển khai; kiểm tra cấu hình auto-deploy trước những lần cập nhật sau.
 
-- Workspace Render có Static Site `vouchvn`, ID `srv-dblae7gae00c73blm43g`.
-- Backend Free `voucher-platform-vnpay-1`, ID `srv-dblf10rncjis73dmhkhg`.
-- API cũ: `https://voucher-platform-vnpay-1.onrender.com/api/health` trả HTTP 200 và database up.
-- Backend cũ lấy repo `TuanAnhNee306/voucher-platform-vnpay`, branch main, commit `442f604379ed7da3132ea0a3a3b73ff6fb26c51f`. Đây chưa phải bản deploy mới.
-- Chưa thay đổi service cũ hoặc dữ liệu của nó.
+## Dữ liệu
 
-## Input riêng và bước còn lại
+- MongoDB Atlas Cluster0, database deployment riêng `vouch_web_catalog_v1`.
+- 32 campaign: **16 DISCOUNT + 16 CASHBACK**; 24 brand và 24 store.
+- Không nhập campaign seed cũ, COMBO, PREPAID hoặc STORED_VALUE vào database deployment.
+- Các ưu đãi là demo giả định, không phải xác nhận ưu đãi chính thức của thương hiệu.
+- Không bịa đơn hàng, đánh giá hoặc doanh số.
+- Nguồn: `backend/data/deploy-catalog.json`; audit dữ liệu local và tiêu chí loại bản ghi thử: `backend/data/deploy-source-audit.md`.
+- Import đã chạy dry-run trước, sau đó apply. Đã đối chiếu aggregate trên Atlas và public API toàn bộ 32 campaign; dữ liệu vẫn đủ sau lần backend cập nhật môi trường/redeploy.
+- Không xóa hoặc thay đổi database local/cluster cũ để tạo catalog này.
 
-`backend/.env.deploy` được Git ignore, chứa secret signing mới tạo riêng; không commit hoặc xuất nội dung. Người dùng có Atlas, chưa có Resend tại lần xác nhận gần nhất.
+## Kiểm tra đã thực hiện
 
-1. Điền `DEPLOY_MONGO_URI` trỏ Atlas database mới `vouch_web_catalog_v1`.
-2. Đăng ký/đăng nhập Resend và điền `RESEND_API_KEY`. Với sender test `onboarding@resend.dev`, chỉ gửi được đến email của tài khoản Resend; gửi cho khách hàng khác cần domain được xác minh.
-3. Importer không tự chạy. Trong thư mục backend, nạp `.env.deploy` rồi chạy dry-run:
+### Local
 
-```powershell
-node -r dotenv/config src/import-deploy-catalog.js dotenv_config_path=.env.deploy
-```
+- Backend: **58/58 test pass**.
+- Frontend: **10/10 test pass**, production build thành công.
+- Importer dry-run không ghi DB; test import lặp giữ stock/timeline/password và không nhân đôi.
+- Kiểm tra production không fallback MongoDB nhúng, không dùng signing secret mặc định.
+- Test email dùng mock; được phân biệt với kiểm tra gửi thật bên dưới.
 
-Sau khi dry-run đúng database và manifest mới được nhập:
+### Public
 
-```powershell
-node -r dotenv/config src/import-deploy-catalog.js --apply dotenv_config_path=.env.deploy
-```
+- API health HTTP 200, database up.
+- Public catalog: total=32, DISCOUNT=16, CASHBACK=16; không lẫn loại khác.
+- 24 logo trả HTTP 200 với Content-Type ảnh.
+- CORS đúng origin frontend; frontend bundle trỏ đúng backend public.
+- SPA refresh tại /, /login, /web/login và một URL campaign detail đều trả ứng dụng React.
+- Trang chủ mới giới thiệu DISCOUNT/CASHBACK, bỏ phần giới thiệu voucher mệnh giá.
+- ADMIN, BRAND_OWNER, STORE_STAFF đăng nhập password thành công; /auth/me, refresh rotation, logout và refresh sau logout đã kiểm tra.
+- Customer password login bị chặn.
+- Customer request OTP không trả code/token. **Người dùng nhận OTP qua Gmail và cung cấp mã để xác minh API thành công**, role CUSTOMER; dùng lại mã bị từ chối. Refresh và logout Customer thành công. Không lưu mã OTP hoặc token vào báo cáo.
+- Thanh toán thử được bật theo yêu cầu rõ ràng của người dùng. Public /api/config xác nhận `paymentSimulator=true`, `vnpayConfigured=false`.
+- Chưa tạo giao dịch thử public từ Customer tới phát hành voucher trong phiên cuối; luồng order/payment có test backend cô lập. Không coi việc bật simulator là xác minh VNPAY hoặc thanh toán thật.
+- Browser QA dùng cây accessibility trên Chrome. Click native bị lỗi định vị; người dùng hỗ trợ bấm các nút Deploy/Sync. Chưa kiểm tra trực quan đầy đủ mọi trang dashboard hoặc mọi kích thước màn hình.
 
-Importer từ chối database có campaign ngoài manifest, chỉ dùng setOnInsert để giữ stock/timeline/account khi retry. Mật khẩu env chỉ dùng provision tài khoản quản lý mới. Không chạy `npm run seed` hoặc `npm run seed:catalog`.
+## Authentication và demo
 
-4. Tạo/cấu hình service mới lấy đúng repo + nhánh tuananhdone; nhập env riêng trong Render. `VITE_API_URL` là origin backend không có `/api`; CORS_ORIGIN và WEB_APP_URL là URL frontend.
-5. Xác minh public URL, health, catalog hai loại, đăng nhập Management, Customer nhận OTP thật, refresh/logout và việc lưu dữ liệu sau restart.
+- Customer chỉ email OTP. Đã provision Customer email người dùng chọn vào database deployment; không tự tạo tài khoản khi request OTP.
+- Management chỉ email/password.
+- Tài khoản demo: `admin@voucher.local`, `owner@highlands.local`, `staff@highlands.local`.
+- Mật khẩu demo giữ `Voucher@123`; đây là môi trường demo với dữ liệu giả định, không phải tài khoản production thực.
+- Owner Highlands thấy hai campaign Highlands; nhân viên được gán chi nhánh Highlands trong manifest.
+- Hoa hồng mặc định 0.1, tức 10%.
 
-## Tiến độ cấu hình thực tế
+## Email và cấu hình riêng
 
-- Đã push code deploy lên `tuananhdone`, commit đầu `5803c859607fa662eb39d6be6a865f4deea1e642`.
-- Resend HTTPS đã trả HTTP 200 và chấp nhận gửi một email kiểm tra đến Gmail người dùng chọn. Chưa coi đây là xác minh OTP đăng nhập hoặc bằng chứng inbox đã nhận thư.
-- Đã kết nối Atlas Cluster0; nhập vào database mới `vouch_web_catalog_v1`: **32 campaign, 16 DISCOUNT, 16 CASHBACK, 24 brand, 24 store**. Đã kiểm tra bằng aggregate trực tiếp, không chạy seed cũ.
-- Service mới dự kiến: `vouch-sdn1908-api` và `vouch-sdn1908-web`; các URL trong Blueprint phải được đối chiếu lại khi Render tạo service.
-- Secret DB/email được lưu trong `.env.deploy` đã Git ignore, không xuất ra báo cáo hoặc commit.
+- Backend dùng Resend HTTPS, phù hợp Render Free.
+- Sender test `Vouch <onboarding@resend.dev>`; chỉ gửi tới chủ tài khoản Resend hiện tại. Muốn Customer khác nhận OTP cần domain/sender được xác minh.
+- SMTP local được giữ trong code, không dùng SMTP 465/587 trên Render Free.
+- Secret DB/email/signing được nhập riêng; `backend/.env.deploy` bị Git ignore và không được commit.
+- Người dùng đã gửi một số secrets trong chat. Cần thay/thu hồi chúng trước khi mở rộng sử dụng; cập nhật Render env và file riêng tương ứng. Không chép lại giá trị cũ vào báo cáo.
+- Khi đổi OTP_SECRET, các challenge đang chờ sẽ không còn xác minh được; khi đổi JWT secrets, người dùng cần đăng nhập lại.
 
-**Chưa hoàn tất deploy public trong báo cáo này.** Cần cập nhật URL/commit/kết quả thực tế sau khi deploy.
+## Cập nhật và rollback
 
-## Giới hạn hosting
+1. Sửa code trên nhánh tuananhdone, chạy kiểm tra phù hợp, review và push khi được phép.
+2. Nếu đổi render.yaml, dùng Manual sync trên Blueprint và xem diff trước khi áp dụng.
+3. Nếu chưa bật auto-deploy, vào service tương ứng → Manual Deploy → Deploy latest commit.
+4. Xác minh lại health, /api/config, CORS, catalog và phiên đăng nhập; không chỉ dựa vào build pass.
+5. Không chạy npm run seed hoặc seed:catalog trên database deployment.
+6. Importer chỉ thêm manifest, không reset dữ liệu cũ. Không chạy lại để gia hạn ngày bán hoặc làm mới số lượng.
+7. Rollback app qua Render deployment trước hoặc commit được chỉ định. Nếu cần phục hồi DB, dùng bản backup/export riêng đã kiểm tra; không chạy script seed xóa toàn bộ.
+8. Hai service demo cũ vẫn giữ nguyên để đối chiếu, nhưng dùng repo và dữ liệu cũ; chúng không phải bản rollback tương đương mọi chức năng/data của catalog mới.
 
-[Render Free](https://render.com/docs/free) chặn SMTP cổng 25/465/587, có cold start và filesystem tạm. Dữ liệu phải nằm trên Atlas. Cron trong process không bảo đảm chạy lúc service ngủ. [Resend test sender](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain) chỉ gửi cho chủ tài khoản khi chưa xác minh domain.
+## Giới hạn và việc cần làm trước production
+
+- Render Free có cold start, filesystem tạm và không bảo đảm cron trong process chạy khi service ngủ. Atlas giữ dữ liệu bền vững; cần scheduler/service luôn chạy cho job đúng giờ.
+- VNPAY chưa được cấu hình ở service mới; thanh toán hiện chỉ là simulator đã được người dùng bật.
+- IP rate limit: code mặc định không tin header proxy; cần xác minh CIDR/topology của Render và cấu hình TRUST_PROXY_CIDRS phù hợp trước khi dùng cho nhiều người. Không bật trust proxy=true tùy ý; các kiểm tra rate limit hiện tại chủ yếu trong test cô lập.
+- Audit runtime dependencies đã phát hiện: backend 8 advisory (5 high, 3 moderate); frontend 3 high. Các package được npm nêu gồm Express/body-parser/path-to-regexp, Mongoose, Nodemailer và React Router. Không chạy npm audit fix --force hoặc nâng major ngoài phạm vi trong lúc deploy. Cần xử lý và test hồi quy trước production; bản demo public này không được coi là đã hoàn tất hardening.
+- Các cảnh báo dependency build/dev trong Render không được tự động coi là exploit trên bundle public; kết quả audit runtime ở trên là kiểm tra riêng với npm audit --omit=dev.
+
+## Tham khảo chính thức
+
+- [Render Free limitations](https://render.com/docs/free)
+- [Resend test sender](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain)
+- [Express behind proxies](https://expressjs.com/en/guide/behind-proxies/)
