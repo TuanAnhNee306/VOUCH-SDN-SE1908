@@ -36,7 +36,7 @@ services:
       - key: PAYMENT_WEBHOOK_SECRET
         generateValue: true
       - key: PAYMENT_SIMULATOR
-        value: "false"
+        value: "true"
       - key: DEFAULT_COMMISSION_RATE
         value: "0.1"
       - key: MAIL_MODE
