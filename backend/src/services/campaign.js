@@ -44,11 +44,13 @@ async function searchTextFor(title, brandId) {
 // FR-CAMP-01..05: tao chien dich DRAFT
 async function create(brandId, body) {
   const data = pick(body);
-  if (!NEW_VOUCHER_TYPES.includes(data.voucherType)) throw badRequest('Chỉ được tạo mới CASHBACK hoặc STORED_VALUE.');
+  if (!NEW_VOUCHER_TYPES.includes(data.voucherType)) throw badRequest('Chỉ được tạo mới DISCOUNT hoặc CASHBACK.');
   const brand = await Brand.findById(brandId);
   if (brand?.status !== BrandStatus.APPROVED) throw badRequest('Thương hiệu phải được phê duyệt trước khi tạo voucher.');
   if (data.limitPerUser === undefined) data.limitPerUser = 5;
   if (data.voucherType === 'CASHBACK' && data.minOrderValue === undefined) data.minOrderValue = 0;
+  if (data.voucherType === 'DISCOUNT' && data.minOrderValue === undefined) data.minOrderValue = 0;
+  if (typeof data.terms !== 'string' || !data.terms.trim()) throw badRequest('Vui lòng công bố điều kiện sử dụng voucher.');
   if (typeof data.title !== 'string' || !data.title.trim()) throw badRequest('Vui lòng nhập tiêu đề chiến dịch.');
   validateValueFields(data);
   validateTimeline(data);

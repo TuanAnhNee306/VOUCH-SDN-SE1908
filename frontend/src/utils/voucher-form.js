@@ -11,7 +11,13 @@ export function validateVoucherForm(form) {
   const end = new Date(form.saleEndAt).getTime();
   const expire = new Date(form.voucherExpireAt).getTime();
   if (![start, end, expire].every(Number.isFinite) || start >= end || expire < end + 10 * 86400000) return 'Thời gian không hợp lệ: kết thúc phải sau bắt đầu, hạn dùng sau kết thúc bán ít nhất 10 ngày.';
-  if (['CASHBACK', 'STORED_VALUE'].includes(form.voucherType) && !form.terms?.trim()) return 'Vui lòng nhập điều kiện sử dụng.';
+  if (['CASHBACK', 'DISCOUNT', 'STORED_VALUE'].includes(form.voucherType) && !form.terms?.trim()) return 'Vui lòng nhập điều kiện sử dụng.';
+  if (form.voucherType === 'DISCOUNT') {
+    if (!['PERCENT', 'AMOUNT'].includes(form.discountType) || !integer('discountValue')) return 'Chọn kiểu giảm và giá trị giảm hợp lệ.';
+    if (form.discountType === 'PERCENT' && (number('discountValue') > 100 || !integer('maxDiscount'))) return 'Phần trăm giảm tối đa 100% và cần mức giảm tối đa.';
+    if (!integer('minOrderValue', 0)) return 'Nhập hóa đơn tối thiểu hợp lệ.';
+    if (form.discountType === 'AMOUNT' && number('discountValue') > number('minOrderValue')) return 'Số tiền giảm không được vượt hóa đơn tối thiểu.';
+  }
   if (form.voucherType === 'STORED_VALUE') {
     if (!integer('faceValue') || number('salePrice') >= number('faceValue')) return 'Mệnh giá phải lớn hơn 0; giá bán phải nhỏ hơn mệnh giá.';
   }

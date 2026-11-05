@@ -145,7 +145,7 @@ async function releaseReservation(order) {
 }
 
 function snapshotBenefits(c) {
-  return Object.fromEntries(['voucherType', 'salePrice', 'faceValue', 'cashbackType', 'cashbackValue', 'maxCashbackAmount', 'minOrderValue', 'refundMethod', 'terms', 'storeIds', 'voucherExpireAt', 'saleStartAt', 'totalQuantity', 'limitPerUser'].map(k => [k, c[k]]));
+  return Object.fromEntries(['voucherType', 'salePrice', 'faceValue', 'discountType', 'discountValue', 'maxDiscount', 'cashbackType', 'cashbackValue', 'maxCashbackAmount', 'minOrderValue', 'refundMethod', 'terms', 'storeIds', 'voucherExpireAt', 'saleStartAt', 'totalQuantity', 'limitPerUser'].map(k => [k, c[k]]));
 }
 const voucherCode = () => `VC-${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
 

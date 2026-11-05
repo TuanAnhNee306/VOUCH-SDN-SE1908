@@ -2,6 +2,7 @@ import { money, VOUCHER_TYPES } from '../utils/format';
 import { Icon } from '../components/Icon';
 
 export function VoucherBenefit({ voucher: c, detailed = false }) {
+  if (c.voucherType === 'DISCOUNT') return <div className="voucher-benefit"><div className="benefit-caption">GIẢM GIÁ TẠI MERCHANT</div><strong>{c.discountType === 'PERCENT' ? `Giảm ${c.discountValue}%` : `Giảm ${money(c.discountValue)}`}</strong>{c.discountType === 'PERCENT' && <span>Tối đa {money(c.maxDiscount)}</span>}{c.minOrderValue > 0 && <span>Hóa đơn từ {money(c.minOrderValue)}</span>}{detailed && <span>Dùng một lần, không cộng dồn ưu đãi.</span>}</div>;
   if (c.voucherType === 'CASHBACK') return <div className="voucher-benefit cashback-benefit">
     <div className="benefit-caption">MERCHANT HOÀN TIỀN</div><strong>{c.cashbackType === 'PERCENTAGE' ? `${c.cashbackValue}%` : money(c.cashbackValue)}</strong>
     {c.maxCashbackAmount != null && <span>Hoàn tối đa {money(c.maxCashbackAmount)}</span>}

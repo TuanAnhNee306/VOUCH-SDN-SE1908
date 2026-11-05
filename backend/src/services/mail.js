@@ -24,8 +24,23 @@ function getTransport() {
 }
 
 const fromAddress = () => str('EMAIL_FROM') || str('SMTP_FROM') || `Voucher Marketplace <${str('SMTP_USER')}>`;
+const isResend = () => str('MAIL_MODE') === 'resend';
+async function sendHttps(to, subject, text, html) {
+  if (!str('RESEND_API_KEY') || !str('EMAIL_FROM')) throw new AppError(503, 'MAIL_NOT_CONFIGURED', 'Cần cấu hình RESEND_API_KEY và EMAIL_FROM thuộc sender đã xác minh.');
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST', headers: { Authorization: `Bearer ${str('RESEND_API_KEY')}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: str('EMAIL_FROM'), to: [to], subject, text, ...(html ? { html } : {}) }), signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok || !(await response.json()).id) throw new Error('Delivery rejected');
+  } catch { throw new AppError(503, 'MAIL_FAILED', 'Không gửi được email. Vui lòng thử lại sau.'); }
+}
 
 function assertOtpConfigured() {
+  if (isResend()) {
+    if (!str('RESEND_API_KEY') || !str('EMAIL_FROM')) throw new AppError(503, 'MAIL_NOT_CONFIGURED', 'Cần cấu hình RESEND_API_KEY và EMAIL_FROM để gửi OTP qua HTTPS.');
+    return;
+  }
   if (str('MAIL_MODE', 'console').toLowerCase() !== 'smtp' || !str('SMTP_USER') || !(str('SMTP_PASS') || str('SMTP_PASSWORD'))) {
     throw new AppError(503, 'MAIL_NOT_CONFIGURED', 'Cần cấu hình MAIL_MODE=smtp, SMTP_HOST/PORT, SMTP_USER, SMTP_PASS và EMAIL_FROM để gửi OTP thật.');
   }
@@ -34,6 +49,7 @@ function assertOtpConfigured() {
 async function sendOtp(to, code) {
   assertOtpConfigured();
   const { text, html } = otpEmail(code, 5);
+  if (isResend()) return sendHttps(to, 'Mã xác thực đăng nhập Voucher Marketplace', text, html);
   try {
     await getTransport().sendMail({ from: fromAddress(), to, subject: 'Mã xác thực đăng nhập Voucher Marketplace', text, html });
   } catch {
@@ -43,6 +59,11 @@ async function sendOtp(to, code) {
 
 // Kiem tra dang nhap SMTP luc khoi dong de bao loi cau hinh som, khong doi toi luc khach bam "Gui ma OTP"
 async function verifyMail() {
+  if (isResend()) {
+    assertOtpConfigured();
+    console.log('[mail] HTTPS email configured. Sender delivery requires a controlled live test.');
+    return;
+  }
   if (isConsoleMode()) {
     console.warn('[mail] MAIL_MODE=console: email không được gửi; đăng nhập OTP yêu cầu SMTP thật.');
     return;
@@ -60,6 +81,7 @@ async function verifyMail() {
 }
 
 async function sendMail(to, subject, text, html) {
+  if (isResend()) return sendHttps(to, subject, text, html);
   if (isConsoleMode()) {
     console.log('[mail] Console mode: message not delivered.');
     return;

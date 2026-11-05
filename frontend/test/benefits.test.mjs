@@ -55,3 +55,11 @@ test('legacy percentage discounts retain discount meaning and cap', () => {
   assert.match(html, /Tối đa 15\.000/);
   assert.doesNotMatch(html, /MERCHANT HOÀN TIỀN/);
 });
+
+test('Discount benefits show direct discount, minimum invoice and cap without stored value', () => {
+  const html = render({ voucherType: 'DISCOUNT', discountType: 'PERCENT', discountValue: 20, maxDiscount: 30000, minOrderValue: 80000, salePrice: 10000 });
+  assert.match(html, /Giảm 20%/);
+  assert.match(html, /Tối đa 30\.000/);
+  assert.match(html, /Hóa đơn từ 80\.000/);
+  assert.doesNotMatch(html, /MỆNH GIÁ|Merchant chịu trách nhiệm hoàn/);
+});

@@ -11,7 +11,7 @@ export function valueText(c) {
   if (c.voucherType === 'CASHBACK') return `Merchant hoàn ${c.cashbackType === 'PERCENTAGE' ? c.cashbackValue + '%' : money(c.cashbackValue)}${c.maxCashbackAmount ? ' (tối đa ' + money(c.maxCashbackAmount) + ')' : ''}. Thanh toán đủ hóa đơn; Merchant trực tiếp hoàn qua ${c.refundMethod}. Hóa đơn tối thiểu ${money(c.minOrderValue)}.`;
   if (c.voucherType === 'STORED_VALUE') return `Mệnh giá ${money(c.faceValue)}. Dùng một lần với hóa đơn ít nhất bằng mệnh giá; không có số dư.`;
   if (c.voucherType === 'DISCOUNT') {
-    return c.discountType === 'PERCENT' ? `Giảm ${c.discountValue}% (tối đa ${money(c.maxDiscount)})` : `Giảm ${money(c.discountValue)}`;
+    return (c.discountType === 'PERCENT' ? `Giảm ${c.discountValue}% (tối đa ${money(c.maxDiscount)})` : `Giảm ${money(c.discountValue)}`) + (c.minOrderValue > 0 ? `. Hóa đơn từ ${money(c.minOrderValue)}.` : '');
   }
   if (c.voucherType === 'COMBO') return `Gói: ${c.comboItems} (giá niêm yết ${money(c.faceValue)})`;
   return `Giá trị: ${money(c.faceValue)}`;

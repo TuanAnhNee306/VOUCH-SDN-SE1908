@@ -233,6 +233,7 @@ const RedemptionLog = schema({
   staffUserId: { type: Id, ref: 'User', required: true, index: true },
   billAmount: { type: Number, default: null },
   cashbackAmount: { type: Number, default: null },
+  discountAmount: { type: Number, default: null },
   cashbackBillKey: String,
   billUpdatedAt: { type: Date, default: null },
   method: { type: String, enum: values(E.RedeemMethod) },

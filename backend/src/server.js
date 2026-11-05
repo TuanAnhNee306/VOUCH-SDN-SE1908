@@ -6,10 +6,11 @@ const { seedIfEmpty } = require('./seed');
 const { verifyMail } = require('./services/mail');
 
 async function main() {
+  require('./config/production').validateProduction();
   await connectDb();
-  if (bool('AUTO_SEED', true)) await seedIfEmpty();
+  if (process.env.NODE_ENV !== 'production' && bool('AUTO_SEED', true)) await seedIfEmpty();
   // Idempotent demo catalog: useful on free hosting where one-off jobs are unavailable.
-  if (bool('SEED_CATALOG_ON_START', false)) {
+  if (process.env.NODE_ENV !== 'production' && bool('SEED_CATALOG_ON_START', false)) {
     const { seedCatalog } = require('./seed-catalog');
     await seedCatalog();
   }

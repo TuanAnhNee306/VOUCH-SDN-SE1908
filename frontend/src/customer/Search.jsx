@@ -94,7 +94,7 @@ export function Search() {
           </div>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setDraft(filter); setSheet(true); }}><Icon name="filter" />Lọc</button>
         </form>
-        <div className="category-chips mt">{[['', 'Tất cả voucher'], ['CASHBACK', 'Cashback'], ['STORED_VALUE', 'Voucher mệnh giá']].map(([v,l]) => <button type="button" className={`category-chip ${type === v ? 'active' : ''}`} aria-pressed={type === v} key={v} onClick={() => { setType(v); setPage(1); }}>{l}</button>)}</div>
+        <div className="category-chips mt">{[['', 'Tất cả voucher'], ['CASHBACK', 'Hoàn tiền'], ['DISCOUNT', 'Giảm giá']].map(([v,l]) => <button type="button" className={`category-chip ${type === v ? 'active' : ''}`} aria-pressed={type === v} key={v} onClick={() => { setType(v); setPage(1); }}>{l}</button>)}</div>
         <div className="chips mt">
           {[1, 3, 5].map((r) => (
             <button type="button" key={r} className={`chip ${radius === r ? 'active' : ''}`} onClick={() => pickRadius(r)}>

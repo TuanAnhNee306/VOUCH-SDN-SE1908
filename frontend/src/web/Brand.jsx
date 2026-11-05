@@ -115,8 +115,12 @@ export function CampaignForm() {
       voucherExpireAt: form.voucherExpireAt ? new Date(form.voucherExpireAt).toISOString() : '',
     };
     for (const k of ['id', 'status', 'stores', 'brand', 'availableQuantity', 'soldQuantity', 'reservedQuantity', 'brandId', 'createdAt', 'updatedAt', 'searchText', 'approvedAt', 'approvedBy', 'submittedAt', 'rejectReason']) delete body[k];
-    for (const k of ['salePrice', 'faceValue', 'cashbackValue', 'maxCashbackAmount', 'minOrderValue', 'totalQuantity', 'limitPerUser']) {
+    for (const k of ['salePrice', 'faceValue', 'cashbackValue', 'maxCashbackAmount', 'minOrderValue', 'discountValue', 'maxDiscount', 'totalQuantity', 'limitPerUser']) {
       body[k] = body[k] === '' || body[k] == null ? null : Number(body[k]);
+    }
+    if (form.voucherType === 'DISCOUNT') {
+      for (const k of ['faceValue', 'cashbackType', 'cashbackValue', 'maxCashbackAmount', 'refundMethod', 'comboItems']) body[k] = null;
+      if (form.discountType === 'AMOUNT') body.maxDiscount = null;
     }
     if (['CASHBACK', 'STORED_VALUE'].includes(form.voucherType)) {
       for (const k of ['discountType', 'discountValue', 'maxDiscount', 'comboItems']) delete body[k];
@@ -143,7 +147,7 @@ export function CampaignForm() {
         <label className="field"><span>Tiêu đề *</span><input required value={form.title} onChange={set('title')} /></label>
         <div className="grid2">
           <label className="field"><span>Loại voucher *</span>
-            <select value={form.voucherType} onChange={(e) => setForm({ ...form, voucherType: e.target.value, faceValue: '', cashbackValue: '', maxCashbackAmount: '', cashbackType: 'PERCENTAGE', minOrderValue: 0, refundMethod: '', discountType: '', discountValue: '', maxDiscount: '', comboItems: '' })} disabled={locked || (!!id && !['CASHBACK', 'STORED_VALUE'].includes(form.voucherType))}>{Object.entries(VOUCHER_TYPES).filter(([k]) => ['CASHBACK', 'STORED_VALUE'].includes(k) || (!!id && k === form.voucherType)).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+            <select value={form.voucherType} onChange={(e) => setForm({ ...form, voucherType: e.target.value, faceValue: '', cashbackValue: '', maxCashbackAmount: '', cashbackType: 'PERCENTAGE', minOrderValue: 0, refundMethod: '', discountType: 'PERCENT', discountValue: '', maxDiscount: '', comboItems: '' })} disabled={locked || (!!id && !['CASHBACK', 'DISCOUNT'].includes(form.voucherType))}>{Object.entries(VOUCHER_TYPES).filter(([k]) => ['CASHBACK', 'DISCOUNT'].includes(k) || (!!id && k === form.voucherType)).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
           </label>
           <label className="field"><span>Danh mục</span>
             <select disabled={locked} value={form.categoryId} onChange={set('categoryId')}><option value="">— Chọn —</option>{categories.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
@@ -157,7 +161,7 @@ export function CampaignForm() {
         <div className="card-title"><span className="form-section-number">2</span>Quyền lợi và số lượng</div>
         <div className="grid2">
           <label className="field"><span>Giá bán (VND) *</span><input type="number" min="1" required disabled={locked} value={form.salePrice} onChange={set('salePrice')} /></label>
-          {form.voucherType !== 'CASHBACK' && <label className="field"><span>Mệnh giá (VND) *</span><input type="number" min="1" required disabled={locked} value={form.faceValue} onChange={set('faceValue')} /></label>}
+          {!['CASHBACK', 'DISCOUNT'].includes(form.voucherType) && <label className="field"><span>Mệnh giá (VND) *</span><input type="number" min="1" required disabled={locked} value={form.faceValue} onChange={set('faceValue')} /></label>}
         </div>
         {form.voucherType === 'STORED_VALUE' && Number(form.faceValue) > 0 && Number(form.salePrice) >= Number(form.faceValue) && <div className="alert alert-bad small">Giá bán phải nhỏ hơn mệnh giá. Ví dụ mệnh giá 100.000đ thì giá bán tối đa 99.999đ.</div>}
         {form.voucherType === 'STORED_VALUE' && <div className="small muted">Tiết kiệm: {money(Math.max(0, Number(form.faceValue) - Number(form.salePrice)))}. Dùng một lần; hóa đơn ít nhất bằng mệnh giá, không có số dư.</div>}
@@ -173,6 +177,7 @@ export function CampaignForm() {
         </>}
         {form.voucherType === 'DISCOUNT' && (
           <div className="grid3">
+            <label className="field"><span>Hóa đơn tối thiểu (VND) *</span><input type="number" min="0" required disabled={locked} value={form.minOrderValue ?? 0} onChange={set('minOrderValue')} /></label>
             <label className="field"><span>Kiểu giảm *</span>
               <select value={form.discountType} onChange={set('discountType')} disabled={locked}><option value="PERCENT">Giảm theo phần trăm</option><option value="AMOUNT">Giảm theo số tiền</option></select>
             </label>

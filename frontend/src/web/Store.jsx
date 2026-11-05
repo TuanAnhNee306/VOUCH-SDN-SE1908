@@ -82,6 +82,7 @@ function ResultBanner({ result, onNext }) {
         <div className="small">Mã voucher: {r.voucherCode}</div>
         <div className="small">Xác nhận lúc {dateTime(r.redeemedAt)} · {r.method === 'QR' ? 'Mã QR' : 'Mã OTP'}</div>
         {r.billAmount != null && <div className="small">Hóa đơn: {money(r.billAmount)}</div>}
+        {r.discountAmount != null && <div className="bold">Giảm trực tiếp: {money(r.discountAmount)}</div>}
         <button type="button" className="btn btn-ghost btn-block mt" style={{ background: '#fff' }} onClick={onNext}>→ Khách tiếp theo</button>
       </div>
     );

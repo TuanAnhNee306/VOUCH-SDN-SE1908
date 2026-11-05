@@ -359,7 +359,7 @@ test('Luong 3: tao nhap -> gui duyet (khoa sua) -> tu choi ve nhap -> duyet -> t
   const stores = (await api('GET', `/brand/${brand.id}/stores`, undefined, owner)).body;
   const now = Date.now();
   const payload = {
-    title: 'Bánh ngọt tặng kèm', voucherType: 'STORED_VALUE', terms: 'Dùng một lần; hóa đơn ít nhất bằng mệnh giá.', salePrice: 30000, faceValue: 45000,
+    title: 'Giảm giá bánh ngọt', voucherType: 'DISCOUNT', terms: 'Dùng một lần; hóa đơn từ 100.000đ.', salePrice: 10000, discountType: 'AMOUNT', discountValue: 30000, minOrderValue: 100000,
     totalQuantity: 10, limitPerUser: 2, saleStartAt: new Date(now - 3600e3).toISOString(), saleEndAt: new Date(now + 20 * 864e5).toISOString(),
     voucherExpireAt: new Date(now + 25 * 864e5).toISOString(), storeIds: [stores[0].id],
   };
@@ -574,7 +574,9 @@ async function marketplaceFixture(type = 'CASHBACK', overrides = {}) {
 }
 async function marketplacePaid(type = 'CASHBACK', overrides = {}, qty = 1) {
   const f = await marketplaceFixture(type, overrides);
-  const created = await api('POST', f.path, f.payload, owner);
+  // Stored value is a historical fixture, no longer creatable through the API.
+  const legacy = type === 'STORED_VALUE' && await M.Campaign.create({ ...f.payload, brandId: f.brand._id });
+  const created = legacy ? { status: 201, body: legacy.toJSON() } : await api('POST', f.path, f.payload, owner);
   assert.equal(created.status, 201, JSON.stringify(created.body));
   await api('PATCH', f.path + '/' + created.body.id + '/submit', {}, owner);
   const approved = await api('PATCH', '/admin/campaigns/' + created.body.id + '/approve', {}, admin);
@@ -632,8 +634,9 @@ test('Marketplace: Stored-Value validation and type changes clear incompatible f
   for (const bad of [{ faceValue: 0 }, { faceValue: -1 }, { faceValue: '200000' }, { salePrice: 0 }, { salePrice: 200000 }, { salePrice: 200001 }, { cashbackType: 'PERCENTAGE' }, { cashbackValue: 50 }, { refundMethod: 'Cash' }]) {
     assert.equal((await api('POST', f.path, { ...f.payload, ...bad }, owner)).status, 400, JSON.stringify(bad));
   }
-  const good = await api('POST', f.path, { ...f.payload, salePrice: 199999 }, owner);
-  assert.equal(good.status, 201, JSON.stringify(good.body));
+  assert.equal((await api('POST', f.path, f.payload, owner)).status, 400);
+  const legacy = await M.Campaign.create({ ...f.payload, brandId: f.brand._id, salePrice: 199999 });
+  const good = { body: legacy.toJSON() };
   for (const patch of [{ salePrice: 200000 }, { faceValue: 199999 }]) {
     const invalidEdit = await api('PATCH', f.path + '/' + good.body.id, patch, owner);
     assert.equal(invalidEdit.status, 400, JSON.stringify(invalidEdit.body));
@@ -644,7 +647,7 @@ test('Marketplace: Stored-Value validation and type changes clear incompatible f
   const cb = await marketplaceFixture();
   const created = await api('POST', cb.path, cb.payload, owner);
   const changed = await api('PATCH', cb.path + '/' + created.body.id, { voucherType: 'STORED_VALUE', faceValue: 400000, cashbackType: null, cashbackValue: null, maxCashbackAmount: null, minOrderValue: null, refundMethod: null }, owner);
-  assert.equal(changed.status, 200, JSON.stringify(changed.body));
+  assert.equal(changed.status, 400, JSON.stringify(changed.body));
 });
 
 test('Marketplace: Cashback concurrent redemption, invoice deduplication, immutable amount, no false completion', async () => {
@@ -698,7 +701,7 @@ test('Marketplace: Stored-Value single use, small bill rejected, unpaid voucher 
 test('Marketplace: concurrent per-customer quota, stock and duplicate payment callbacks', async () => {
   const f = await marketplaceFixture('STORED_VALUE', { totalQuantity: 2, limitPerUser: 1 });
   const campaigns = require('../src/services/campaign');
-  const c = await campaigns.create(f.brand._id, f.payload);
+  const c = await M.Campaign.create({ ...f.payload, brandId: f.brand._id });
   await campaigns.submit(c._id); await campaigns.approve(c._id, f.brand.ownerUserId);
   const user = await M.User.findOne({ email: 'khach@voucher.local' });
   const outcomes = await Promise.allSettled([orders.createOrder(user._id, { campaignId: c._id, quantity: 1 }), orders.createOrder(user._id, { campaignId: c._id, quantity: 1 })]);

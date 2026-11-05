@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test test/catalog.test.mjs test/benefits.test.mjs test/auth-route.test.mjs",
+    "test": "node --test test/catalog.test.mjs test/benefits.test.mjs test/auth-route.test.mjs test/voucher-form.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

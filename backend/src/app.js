@@ -6,11 +6,16 @@ const { str } = require('./config/env');
 
 function createApp() {
   const app = express();
+  // Set an explicit verified proxy subnet list in hosting env, never trust all hops.
+  if (str('TRUST_PROXY_CIDRS')) app.set('trust proxy', str('TRUST_PROXY_CIDRS').split(',').map(s => s.trim()).filter(Boolean));
   const origins = str('CORS_ORIGIN', 'http://localhost:5173').split(',').map((s) => s.trim()).filter(Boolean);
   app.use(cors({ origin: (origin, cb) => cb(null, !origin || origins.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) }));
   app.use(express.json({ limit: '2mb' }));
 
-  app.get('/api/health', (_req, res) => res.json({ status: 'ok', db: mongoose.connection.readyState === 1 ? 'up' : 'down' }));
+  app.get('/api/health', (_req, res) => {
+    const connected = mongoose.connection.readyState === 1;
+    res.status(connected ? 200 : 503).json({ status: connected ? 'ok' : 'unavailable', db: connected ? 'up' : 'down' });
+  });
   app.use('/api/auth', require('./routes/auth'));
   app.use('/api', require('./routes/public'));
   app.use('/api', require('./routes/customer'));

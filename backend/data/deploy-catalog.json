@@ -1,0 +1,593 @@
+{
+  "version": "vouch-web-catalog-v1",
+  "source": "DEPLOY_RENDER_HANDOFF.md:32 proposed demo offers; brand/store metadata adapted from development catalog; no legacy campaigns imported",
+  "disclaimer": "Dữ liệu demo giả định, không phải ưu đãi chính thức từ thương hiệu.",
+  "brands": [
+    {
+      "name": "Highlands Coffee",
+      "category": "Cà phê & trà",
+      "logo": "/brands/highlands.png",
+      "store": {
+        "name": "Highlands Coffee Nhà thờ Đức Bà",
+        "address": "2 Công xã Paris, Quận 1, TP.HCM"
+      }
+    },
+    {
+      "name": "Phúc Long",
+      "category": "Cà phê & trà",
+      "logo": "/brands/phuclong.png",
+      "store": {
+        "name": "Phúc Long Lê Lợi",
+        "address": "42 Lê Lợi, Quận 1, TP.HCM"
+      }
+    },
+    {
+      "name": "Katinat",
+      "category": "Cà phê & trà",
+      "logo": "/brands/katinat.png",
+      "store": {
+        "name": "Katinat Đồng Khởi",
+        "address": "45 Đồng Khởi, Quận 1, TP.HCM"
+      }
+    },
+    {
+      "name": "Gong Cha",
+      "category": "Cà phê & trà",
+      "logo": "/brands/gongcha.png",
+      "store": {
+        "name": "Gong Cha Nguyễn Huệ",
+        "address": "68 Nguyễn Huệ, Quận 1, TP.HCM"
+      }
+    },
+    {
+      "name": "TocoToco",
+      "category": "Cà phê & trà",
+      "logo": "/brands/tocotoco.png",
+      "store": {
+        "name": "TocoToco Cầu Giấy",
+        "address": "183 Cầu Giấy, Hà Nội"
+      }
+    },
+    {
+      "name": "The Coffee House",
+      "category": "Cà phê & trà",
+      "logo": "/brands/the-coffee-house.png",
+      "store": {
+        "name": "The Coffee House Pasteur",
+        "address": "223 Pasteur, Quận 3, TP.HCM"
+      }
+    },
+    {
+      "name": "Jollibee",
+      "category": "Ăn uống",
+      "logo": "/brands/jollibee.png",
+      "store": {
+        "name": "Jollibee Nguyễn Trãi",
+        "address": "212 Nguyễn Trãi, Quận 1, TP.HCM"
+      }
+    },
+    {
+      "name": "Lotteria",
+      "category": "Ăn uống",
+      "logo": "/brands/lotteria.png",
+      "store": {
+        "name": "Lotteria Vincom Bà Triệu",
+        "address": "191 Bà Triệu, Hà Nội"
+      }
+    },
+    {
+      "name": "KFC",
+      "category": "Ăn uống",
+      "logo": "/brands/kfc.png",
+      "store": {
+        "name": "KFC Lê Văn Sỹ",
+        "address": "223 Lê Văn Sỹ, Quận 3, TP.HCM"
+      }
+    },
+    {
+      "name": "Popeyes",
+      "category": "Ăn uống",
+      "logo": "/brands/popeyes.png",
+      "store": {
+        "name": "Popeyes Nguyễn Thị Minh Khai",
+        "address": "156 Nguyễn Thị Minh Khai, Quận 3, TP.HCM"
+      }
+    },
+    {
+      "name": "Marukame Udon",
+      "category": "Ăn uống",
+      "logo": "/brands/marukame-udon.svg",
+      "store": {
+        "name": "Marukame Udon Saigon Centre",
+        "address": "65 Lê Lợi, Quận 1, TP.HCM"
+      }
+    },
+    {
+      "name": "Gogi House",
+      "category": "Ăn uống",
+      "logo": "/brands/gogi-house.png",
+      "store": {
+        "name": "Gogi House Vincom Đồng Khởi",
+        "address": "72 Lê Thánh Tôn, Quận 1, TP.HCM"
+      }
+    },
+    {
+      "name": "WinMart",
+      "category": "Mua sắm",
+      "logo": "/brands/winmart.png",
+      "store": {
+        "name": "WinMart Lê Thánh Tôn",
+        "address": "72 Lê Thánh Tôn, Quận 1, TP.HCM"
+      }
+    },
+    {
+      "name": "Watsons",
+      "category": "Làm đẹp",
+      "logo": "/brands/watsons.png",
+      "store": {
+        "name": "Watsons Crescent Mall",
+        "address": "101 Tôn Dật Tiên, Quận 7, TP.HCM"
+      }
+    },
+    {
+      "name": "Hasaki",
+      "category": "Làm đẹp",
+      "logo": "/brands/hasaki.png",
+      "store": {
+        "name": "Hasaki Nguyễn Trãi",
+        "address": "555 Nguyễn Trãi, Quận 5, TP.HCM"
+      }
+    },
+    {
+      "name": "Galaxy Cinema",
+      "category": "Giải trí",
+      "logo": "/brands/galaxy-cinema.png",
+      "store": {
+        "name": "Galaxy Cinema Nguyễn Du",
+        "address": "116 Nguyễn Du, Quận 1, TP.HCM"
+      }
+    },
+    {
+      "name": "Bách Hóa Xanh",
+      "category": "Mua sắm",
+      "logo": "/brands/bach-hoa-xanh.png",
+      "store": {
+        "name": "Bách Hóa Xanh Phan Xích Long",
+        "address": "184 Phan Xích Long, Phú Nhuận, TP.HCM"
+      }
+    },
+    {
+      "name": "Co.opmart",
+      "category": "Mua sắm",
+      "logo": "/brands/coopmart.png",
+      "store": {
+        "name": "Co.opmart Cống Quỳnh",
+        "address": "189C Cống Quỳnh, Quận 1, TP.HCM"
+      }
+    },
+    {
+      "name": "AEON",
+      "category": "Mua sắm",
+      "logo": "/brands/aeon.png",
+      "store": {
+        "name": "AEON Tân Phú",
+        "address": "30 Bờ Bao Tân Thắng, Tân Phú, TP.HCM"
+      }
+    },
+    {
+      "name": "Guardian",
+      "category": "Làm đẹp",
+      "logo": "/brands/guardian.png",
+      "store": {
+        "name": "Guardian Nguyễn Trãi",
+        "address": "262 Nguyễn Trãi, Quận 1, TP.HCM"
+      }
+    },
+    {
+      "name": "Cỏ Mềm",
+      "category": "Làm đẹp",
+      "logo": "/brands/co-mem.png",
+      "store": {
+        "name": "Cỏ Mềm Cầu Giấy",
+        "address": "165 Cầu Giấy, Hà Nội"
+      }
+    },
+    {
+      "name": "CGV Cinemas",
+      "category": "Giải trí",
+      "logo": "/brands/cgv.png",
+      "store": {
+        "name": "CGV VivoCity",
+        "address": "1058 Nguyễn Văn Linh, Quận 7, TP.HCM"
+      }
+    },
+    {
+      "name": "Lotte Cinema",
+      "category": "Giải trí",
+      "logo": "/brands/lotte-cinema.png",
+      "store": {
+        "name": "Lotte Cinema Gò Vấp",
+        "address": "242 Nguyễn Văn Lượng, Gò Vấp, TP.HCM"
+      }
+    },
+    {
+      "name": "BHD Star",
+      "category": "Giải trí",
+      "logo": "/brands/bhd-star.png",
+      "store": {
+        "name": "BHD Star Bitexco",
+        "address": "2 Hải Triều, Quận 1, TP.HCM"
+      }
+    }
+  ],
+  "campaigns": [
+    {
+      "key": "DC-HIGHLANDS-20",
+      "brand": "Highlands Coffee",
+      "title": "Giảm 20% đồ uống",
+      "salePrice": 10000,
+      "minOrderValue": 80000,
+      "voucherType": "DISCOUNT",
+      "discountType": "PERCENT",
+      "discountValue": 20,
+      "maxDiscount": 30000
+    },
+    {
+      "key": "DC-PHUCLONG-25",
+      "brand": "Phúc Long",
+      "title": "Giảm 25% trà và cà phê",
+      "salePrice": 12000,
+      "minOrderValue": 100000,
+      "voucherType": "DISCOUNT",
+      "discountType": "PERCENT",
+      "discountValue": 25,
+      "maxDiscount": 40000
+    },
+    {
+      "key": "DC-KATINAT-25",
+      "brand": "Katinat",
+      "title": "Giảm 25% đồ uống",
+      "salePrice": 12000,
+      "minOrderValue": 100000,
+      "voucherType": "DISCOUNT",
+      "discountType": "PERCENT",
+      "discountValue": 25,
+      "maxDiscount": 40000
+    },
+    {
+      "key": "DC-GONGCHA-20",
+      "brand": "Gong Cha",
+      "title": "Giảm 20% trà sữa",
+      "salePrice": 10000,
+      "minOrderValue": 100000,
+      "voucherType": "DISCOUNT",
+      "discountType": "PERCENT",
+      "discountValue": 20,
+      "maxDiscount": 35000
+    },
+    {
+      "key": "DC-TOCOTOCO-30",
+      "brand": "TocoToco",
+      "title": "Giảm 30% đồ uống",
+      "salePrice": 10000,
+      "minOrderValue": 80000,
+      "voucherType": "DISCOUNT",
+      "discountType": "PERCENT",
+      "discountValue": 30,
+      "maxDiscount": 40000
+    },
+    {
+      "key": "DC-TCH-30K",
+      "brand": "The Coffee House",
+      "title": "Giảm 30.000đ hóa đơn",
+      "salePrice": 10000,
+      "minOrderValue": 120000,
+      "voucherType": "DISCOUNT",
+      "discountType": "AMOUNT",
+      "discountValue": 30000,
+      "maxDiscount": null
+    },
+    {
+      "key": "DC-JOLLIBEE-25K",
+      "brand": "Jollibee",
+      "title": "Giảm 25.000đ hóa đơn",
+      "salePrice": 8000,
+      "minOrderValue": 100000,
+      "voucherType": "DISCOUNT",
+      "discountType": "AMOUNT",
+      "discountValue": 25000,
+      "maxDiscount": null
+    },
+    {
+      "key": "DC-LOTTERIA-50K",
+      "brand": "Lotteria",
+      "title": "Giảm 50.000đ hóa đơn",
+      "salePrice": 15000,
+      "minOrderValue": 200000,
+      "voucherType": "DISCOUNT",
+      "discountType": "AMOUNT",
+      "discountValue": 50000,
+      "maxDiscount": null
+    },
+    {
+      "key": "DC-KFC-20",
+      "brand": "KFC",
+      "title": "Giảm 20% hóa đơn ăn uống",
+      "salePrice": 15000,
+      "minOrderValue": 150000,
+      "voucherType": "DISCOUNT",
+      "discountType": "PERCENT",
+      "discountValue": 20,
+      "maxDiscount": 50000
+    },
+    {
+      "key": "DC-POPEYES-40K",
+      "brand": "Popeyes",
+      "title": "Giảm 40.000đ hóa đơn",
+      "salePrice": 12000,
+      "minOrderValue": 180000,
+      "voucherType": "DISCOUNT",
+      "discountType": "AMOUNT",
+      "discountValue": 40000,
+      "maxDiscount": null
+    },
+    {
+      "key": "DC-MARUKAME-15",
+      "brand": "Marukame Udon",
+      "title": "Giảm 15% hóa đơn",
+      "salePrice": 10000,
+      "minOrderValue": 150000,
+      "voucherType": "DISCOUNT",
+      "discountType": "PERCENT",
+      "discountValue": 15,
+      "maxDiscount": 40000
+    },
+    {
+      "key": "DC-GOGI-100K",
+      "brand": "Gogi House",
+      "title": "Giảm 100.000đ hóa đơn",
+      "salePrice": 30000,
+      "minOrderValue": 500000,
+      "voucherType": "DISCOUNT",
+      "discountType": "AMOUNT",
+      "discountValue": 100000,
+      "maxDiscount": null
+    },
+    {
+      "key": "DC-WINMART-30K",
+      "brand": "WinMart",
+      "title": "Giảm 30.000đ mua sắm",
+      "salePrice": 8000,
+      "minOrderValue": 300000,
+      "voucherType": "DISCOUNT",
+      "discountType": "AMOUNT",
+      "discountValue": 30000,
+      "maxDiscount": null
+    },
+    {
+      "key": "DC-WATSONS-15",
+      "brand": "Watsons",
+      "title": "Giảm 15% chăm sóc cá nhân",
+      "salePrice": 15000,
+      "minOrderValue": 250000,
+      "voucherType": "DISCOUNT",
+      "discountType": "PERCENT",
+      "discountValue": 15,
+      "maxDiscount": 70000
+    },
+    {
+      "key": "DC-HASAKI-50K",
+      "brand": "Hasaki",
+      "title": "Giảm 50.000đ mỹ phẩm",
+      "salePrice": 15000,
+      "minOrderValue": 300000,
+      "voucherType": "DISCOUNT",
+      "discountType": "AMOUNT",
+      "discountValue": 50000,
+      "maxDiscount": null
+    },
+    {
+      "key": "DC-GALAXY-25",
+      "brand": "Galaxy Cinema",
+      "title": "Giảm 25% vé phim 2D",
+      "salePrice": 12000,
+      "minOrderValue": 120000,
+      "voucherType": "DISCOUNT",
+      "discountType": "PERCENT",
+      "discountValue": 25,
+      "maxDiscount": 50000
+    },
+    {
+      "key": "CB-HIGHLANDS-15",
+      "brand": "Highlands Coffee",
+      "title": "Hoàn 15% đồ uống",
+      "salePrice": 10000,
+      "minOrderValue": 150000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 15,
+      "maxCashbackAmount": 40000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-PHUCLONG-20",
+      "brand": "Phúc Long",
+      "title": "Hoàn 20% trà và cà phê",
+      "salePrice": 15000,
+      "minOrderValue": 150000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 20,
+      "maxCashbackAmount": 50000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-KATINAT-20",
+      "brand": "Katinat",
+      "title": "Hoàn 20% đồ uống",
+      "salePrice": 15000,
+      "minOrderValue": 150000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 20,
+      "maxCashbackAmount": 50000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-GONGCHA-25K",
+      "brand": "Gong Cha",
+      "title": "Hoàn 25.000đ hóa đơn",
+      "salePrice": 8000,
+      "minOrderValue": 120000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "FIXED_AMOUNT",
+      "cashbackValue": 25000,
+      "maxCashbackAmount": 25000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-TCH-20",
+      "brand": "The Coffee House",
+      "title": "Hoàn 20% hóa đơn",
+      "salePrice": 15000,
+      "minOrderValue": 180000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 20,
+      "maxCashbackAmount": 60000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-JOLLIBEE-15",
+      "brand": "Jollibee",
+      "title": "Hoàn 15% hóa đơn",
+      "salePrice": 10000,
+      "minOrderValue": 150000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 15,
+      "maxCashbackAmount": 40000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-KFC-20",
+      "brand": "KFC",
+      "title": "Hoàn 20% hóa đơn",
+      "salePrice": 20000,
+      "minOrderValue": 250000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 20,
+      "maxCashbackAmount": 80000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-GOGI-15",
+      "brand": "Gogi House",
+      "title": "Hoàn 15% hóa đơn",
+      "salePrice": 30000,
+      "minOrderValue": 600000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 15,
+      "maxCashbackAmount": 150000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-BHX-30K",
+      "brand": "Bách Hóa Xanh",
+      "title": "Hoàn 30.000đ mua sắm",
+      "salePrice": 10000,
+      "minOrderValue": 350000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "FIXED_AMOUNT",
+      "cashbackValue": 30000,
+      "maxCashbackAmount": 30000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-COOP-40K",
+      "brand": "Co.opmart",
+      "title": "Hoàn 40.000đ mua sắm",
+      "salePrice": 12000,
+      "minOrderValue": 400000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "FIXED_AMOUNT",
+      "cashbackValue": 40000,
+      "maxCashbackAmount": 40000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-AEON-10",
+      "brand": "AEON",
+      "title": "Hoàn 10% mua sắm",
+      "salePrice": 20000,
+      "minOrderValue": 500000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 10,
+      "maxCashbackAmount": 100000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-GUARDIAN-15",
+      "brand": "Guardian",
+      "title": "Hoàn 15% chăm sóc cá nhân",
+      "salePrice": 20000,
+      "minOrderValue": 300000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 15,
+      "maxCashbackAmount": 80000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-COMEM-20",
+      "brand": "Cỏ Mềm",
+      "title": "Hoàn 20% mỹ phẩm",
+      "salePrice": 20000,
+      "minOrderValue": 300000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 20,
+      "maxCashbackAmount": 100000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-CGV-20",
+      "brand": "CGV Cinemas",
+      "title": "Hoàn 20% vé phim 2D",
+      "salePrice": 15000,
+      "minOrderValue": 200000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 20,
+      "maxCashbackAmount": 60000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-LOTTECINEMA-30K",
+      "brand": "Lotte Cinema",
+      "title": "Hoàn 30.000đ vé phim",
+      "salePrice": 10000,
+      "minOrderValue": 150000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "FIXED_AMOUNT",
+      "cashbackValue": 30000,
+      "maxCashbackAmount": 30000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    },
+    {
+      "key": "CB-BHD-20",
+      "brand": "BHD Star",
+      "title": "Hoàn 20% vé phim",
+      "salePrice": 12000,
+      "minOrderValue": 180000,
+      "voucherType": "CASHBACK",
+      "cashbackType": "PERCENTAGE",
+      "cashbackValue": 20,
+      "maxCashbackAmount": 50000,
+      "refundMethod": "Ti?n m?t ho?c chuy?n kho?n ng?n h?ng"
+    }
+  ]
+}

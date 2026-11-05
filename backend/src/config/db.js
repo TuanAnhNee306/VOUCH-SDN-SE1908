@@ -9,15 +9,22 @@ const EMBEDDED_PORT = 27027;
 // Ket noi MONGO_URI; khong ket noi duoc (chua cai MongoDB) thi bat MongoDB nhung, du lieu luu o backend/.mongo-data
 async function connectDb() {
   mongoose.set('strictQuery', true);
+  if (str('NODE_ENV') === 'production') {
+    if (!str('MONGO_URI') || bool('USE_EMBEDDED_MONGO')) throw new Error('Production requires an external MONGO_URI and USE_EMBEDDED_MONGO=false.');
+    try { await mongoose.connect(str('MONGO_URI'), { serverSelectionTimeoutMS: 10000 }); }
+    catch { await mongoose.disconnect(); throw new Error('Production database connection failed. Check Atlas credentials and network access.'); }
+    console.log('[db] External production database connected.');
+    return;
+  }
   if (!bool('USE_EMBEDDED_MONGO')) {
     const uri = str('MONGO_URI', 'mongodb://127.0.0.1:27017/voucher_platform');
     try {
       await mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 });
-      console.log(`[db] Da ket noi MongoDB: ${uri.replace(/\/\/[^@]+@/, '//***@')}`);
+      console.log('[db] MongoDB connected.');
       return;
     } catch (e) {
       await mongoose.disconnect().catch(() => {});
-      console.warn(`[db] Khong ket noi duoc ${uri} (${e.message}). Chuyen sang MongoDB nhung...`);
+      console.warn('[db] External connection unavailable. Trying local embedded MongoDB.');
     }
   }
   // MongoDB nhung co the dang chay san (vd. backend dang chay khi goi `npm run seed`) -> dung chung

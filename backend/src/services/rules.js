@@ -25,7 +25,7 @@ function refundableUntil(paidAt, voucherExpireAt, windowDays = 7, minDaysBeforeE
 // ---------- Chien dich ----------
 
 // FR-CAMP-12: truong gia tri bat buoc theo loai voucher
-const NEW_VOUCHER_TYPES = ['CASHBACK', 'STORED_VALUE'];
+const NEW_VOUCHER_TYPES = ['CASHBACK', 'DISCOUNT'];
 const moneyValid = (v, min = 1) => typeof v === 'number' && Number.isSafeInteger(v) && v <= Math.floor(Number.MAX_SAFE_INTEGER / 100) && v >= min;
 function validateMarketplaceFields(c) {
   if (!moneyValid(c.salePrice)) throw badRequest('Giá bán phải là số nguyên VND lớn hơn 0 trong giới hạn an toàn.');
@@ -55,7 +55,19 @@ function calculateCashback(c, bill) {
   return Math.floor(Math.min(value, bill, c.maxCashbackAmount ?? bill));
 }
 function validateValueFields(c) {
-  if (NEW_VOUCHER_TYPES.includes(c.voucherType)) return validateMarketplaceFields(c);
+  if (['CASHBACK', 'STORED_VALUE'].includes(c.voucherType)) return validateMarketplaceFields(c);
+  if (c.voucherType === 'DISCOUNT') {
+    if (!moneyValid(c.salePrice) || !moneyValid(c.totalQuantity) || !moneyValid(c.limitPerUser ?? 5)) throw badRequest('Giá bán, số lượng và giới hạn mua phải là số nguyên dương.');
+    if (c.limitPerUser > c.totalQuantity) throw badRequest('Giới hạn mua không được vượt số lượng phát hành.');
+    if (!['PERCENT', 'AMOUNT'].includes(c.discountType)) throw badRequest('Kiểu giảm giá không hợp lệ.');
+    if (!moneyValid(c.discountValue) || (c.discountType === 'PERCENT' && c.discountValue > 100)) throw badRequest('Giá trị giảm không hợp lệ.');
+    if (c.discountType === 'PERCENT' && !moneyValid(c.maxDiscount)) throw badRequest('Giảm phần trăm cần mức giảm tối đa.');
+    if (c.minOrderValue != null && !moneyValid(c.minOrderValue, 0)) throw badRequest('Hóa đơn tối thiểu phải là số nguyên không âm.');
+    if (c.discountType === 'AMOUNT' && c.minOrderValue != null && c.discountValue > c.minOrderValue) throw badRequest('Số tiền giảm không được vượt hóa đơn tối thiểu.');
+    if (c.maxDiscount != null && !moneyValid(c.maxDiscount)) throw badRequest('Mức giảm tối đa không hợp lệ.');
+    for (const k of ['faceValue', 'cashbackType', 'cashbackValue', 'maxCashbackAmount', 'refundMethod', 'comboItems']) if (c[k] != null && c[k] !== '') throw badRequest('Voucher giảm giá không được chứa cấu hình mệnh giá, Cashback hoặc combo.');
+    return;
+  }
   const salePrice = Number(c.salePrice);
   const faceValue = Number(c.faceValue);
   if (!Number.isInteger(salePrice) || salePrice < 1) throw badRequest('Giá bán phải là số nguyên lớn hơn 0.');

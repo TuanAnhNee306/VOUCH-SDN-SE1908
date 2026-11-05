@@ -151,6 +151,11 @@ async function redeem(staffUserId, { storeId, qrPayload, otpCode, billAmount, bi
   }
 
   let cashbackAmount = null;
+  let discountAmount = null;
+  if (!failure && campaign.voucherType === 'DISCOUNT') {
+    if (!moneyValid(bill) || bill < (campaign.minOrderValue || 0)) throw business('BILL_TOO_SMALL', 'Hóa đơn chưa đạt giá trị tối thiểu của voucher giảm giá. Mã vẫn còn hiệu lực.');
+    discountAmount = Math.floor(Math.min(bill, campaign.discountType === 'PERCENT' ? bill * campaign.discountValue / 100 : campaign.discountValue, campaign.maxDiscount ?? bill));
+  }
   let cashbackBillKey;
   if (!failure && ['CASHBACK', 'STORED_VALUE'].includes(campaign.voucherType)) {
     const brand = await Brand.findById(item.brandId);
@@ -191,12 +196,13 @@ async function redeem(staffUserId, { storeId, qrPayload, otpCode, billAmount, bi
     throw business(b?.reason || 'VOUCHER_UNAVAILABLE', b?.message || 'Voucher không còn sử dụng được.');
   }
   await RedeemToken.updateMany({ voucherItemId: item._id, usedAt: null, revokedAt: null }, { revokedAt: now });
-  const log = await RedemptionLog.create({ voucherItemId: item._id, storeId, staffUserId, billAmount: bill, method, redeemedAt: now, cashbackAmount, ...(cashbackBillKey ? { cashbackBillKey } : {}) });
+  const log = await RedemptionLog.create({ voucherItemId: item._id, storeId, staffUserId, billAmount: bill, method, redeemedAt: now, cashbackAmount, discountAmount, ...(cashbackBillKey ? { cashbackBillKey } : {}) });
   if (cashbackAmount === null) await notifications.voucherUsed(item.userId, item._id, campaign.title, store.name);
   return {
     message: cashbackAmount !== null ? 'Đã ghi nhận yêu cầu Cashback, chờ Merchant trực tiếp hoàn tiền. Chưa xác nhận Customer đã nhận tiền.' : 'Xác nhận sử dụng thành công.',
     status: cashbackAmount !== null ? 'PENDING_CASHBACK' : 'USED',
     cashbackAmount,
+    discountAmount,
     redemptionLogId: String(log._id),
     voucherItemId: String(item._id),
     voucherCode: item.code,
@@ -220,6 +226,7 @@ async function toHistoryItem(log) {
     storeId: String(log.storeId), storeName: store?.name ?? null, method: log.method, billAmount: log.billAmount,
     billUpdatedAt: log.billUpdatedAt, redeemedAt: log.redeemedAt, billEditableUntil: editableUntil,
     cashbackAmount: log.cashbackAmount,
+    discountAmount: log.discountAmount,
     billEditable: !['CASHBACK', 'STORED_VALUE'].includes(campaign?.voucherType) && Date.now() <= editableUntil.getTime(),
   };
 }
@@ -239,6 +246,11 @@ async function updateBill(staffUserId, logId, billAmount) {
   const item = await VoucherItem.findById(log.voucherItemId);
   const campaign = await Campaign.findById(item.campaignId);
   if (['CASHBACK', 'STORED_VALUE'].includes(campaign.voucherType)) throw business('BILL_LOCKED', 'Hóa đơn đã xác nhận không được thay đổi.');
+  const benefits = item.benefitSnapshot || campaign;
+  if (benefits.voucherType === 'DISCOUNT') {
+    if (!moneyValid(bill) || bill < (benefits.minOrderValue || 0)) throw business('BILL_TOO_SMALL', 'Hóa đơn chưa đạt giá trị tối thiểu của voucher giảm giá.');
+    log.discountAmount = Math.floor(Math.min(bill, benefits.discountType === 'PERCENT' ? bill * benefits.discountValue / 100 : benefits.discountValue, benefits.maxDiscount ?? bill));
+  }
   const windowMin = int('BILL_EDIT_WINDOW_MINUTES', 10);
   const until = new Date(log.redeemedAt.getTime() + windowMin * MINUTE);
   if (Date.now() > until.getTime()) {
