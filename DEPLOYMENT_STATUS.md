@@ -49,6 +49,14 @@ Importer từ chối database có campaign ngoài manifest, chỉ dùng setOnIns
 4. Tạo/cấu hình service mới lấy đúng repo + nhánh tuananhdone; nhập env riêng trong Render. `VITE_API_URL` là origin backend không có `/api`; CORS_ORIGIN và WEB_APP_URL là URL frontend.
 5. Xác minh public URL, health, catalog hai loại, đăng nhập Management, Customer nhận OTP thật, refresh/logout và việc lưu dữ liệu sau restart.
 
+## Tiến độ cấu hình thực tế
+
+- Đã push code deploy lên `tuananhdone`, commit đầu `5803c859607fa662eb39d6be6a865f4deea1e642`.
+- Resend HTTPS đã trả HTTP 200 và chấp nhận gửi một email kiểm tra đến Gmail người dùng chọn. Chưa coi đây là xác minh OTP đăng nhập hoặc bằng chứng inbox đã nhận thư.
+- Đã kết nối Atlas Cluster0; nhập vào database mới `vouch_web_catalog_v1`: **32 campaign, 16 DISCOUNT, 16 CASHBACK, 24 brand, 24 store**. Đã kiểm tra bằng aggregate trực tiếp, không chạy seed cũ.
+- Service mới dự kiến: `vouch-sdn1908-api` và `vouch-sdn1908-web`; các URL trong Blueprint phải được đối chiếu lại khi Render tạo service.
+- Secret DB/email được lưu trong `.env.deploy` đã Git ignore, không xuất ra báo cáo hoặc commit.
+
 **Chưa hoàn tất deploy public trong báo cáo này.** Cần cập nhật URL/commit/kết quả thực tế sau khi deploy.
 
 ## Giới hạn hosting

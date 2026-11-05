@@ -1,7 +1,7 @@
 # Demo deployment. Populate sync:false values privately in Render.
 services:
   - type: web
-    name: vouch-api
+    name: vouch-sdn1908-api
     runtime: node
     plan: free
     rootDir: backend
@@ -22,9 +22,9 @@ services:
       - key: MONGO_URI
         sync: false
       - key: CORS_ORIGIN
-        sync: false
+        value: https://vouch-sdn1908-web.onrender.com
       - key: WEB_APP_URL
-        sync: false
+        value: https://vouch-sdn1908-web.onrender.com
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
@@ -37,6 +37,8 @@ services:
         generateValue: true
       - key: PAYMENT_SIMULATOR
         value: "false"
+      - key: DEFAULT_COMMISSION_RATE
+        value: "0.1"
       - key: MAIL_MODE
         value: resend
       - key: RESEND_API_KEY
@@ -44,14 +46,14 @@ services:
       - key: EMAIL_FROM
         sync: false
   - type: web
-    name: vouch-web
+    name: vouch-sdn1908-web
     runtime: static
     rootDir: frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
-        sync: false
+        value: https://vouch-sdn1908-api.onrender.com
     routes:
       - type: rewrite
         source: /*
